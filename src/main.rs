@@ -66,7 +66,9 @@ fn main() -> eframe::Result<()> {
     }
 
     if mcp_mode {
-        std::process::exit(restic_tray::agent::run_mcp_stdio(config_path));
+        let code = restic_tray::agent::run_mcp_stdio(config_path);
+        restic_tray::rclone::shutdown();
+        std::process::exit(code);
     }
 
     restic_tray::run_gui(LaunchOptions {

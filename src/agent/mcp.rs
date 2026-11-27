@@ -200,15 +200,15 @@ const TOOLS: &[ToolDef] = &[
     ToolDef {
         name: "update_storage_config",
         op: "update_storage_config",
-        description: "保存先（Cloudflare R2）の非秘密設定（storageBackend: \"r2\"、r2）を検証して config.json に保存します。秘密情報（アクセスキー・リポジトリパスワード）や実行バイナリパス（resticBinaryPath）は MCP からは変更できません。",
+        description: "保存先（Cloudflare R2、または Rclone serve s3 アダプタ）の非秘密設定（storageBackend、r2、rclone）を検証して config.json に保存します。秘密情報（アクセスキー・リポジトリパスワード）や実行バイナリパス（resticBinaryPath、rclone.binaryPath）は MCP からは変更できません。",
         input_schema: || {
             json!({
                 "type": "object",
                 "properties": {
                     "storageBackend": {
                         "type": "string",
-                        "enum": ["r2"],
-                        "description": "保存先バックエンド（\"r2\" のみ対応）"
+                        "enum": ["r2", "rclone"],
+                        "description": "保存先バックエンド（\"r2\" = Cloudflare R2、\"rclone\" = rclone serve s3 ループバックアダプタ）"
                     },
                     "r2": {
                         "type": "object",
@@ -219,6 +219,16 @@ const TOOLS: &[ToolDef] = &[
                             "endpointOverride": { "type": ["string", "null"] },
                             "region": { "type": "string" },
                             "maxConnections": { "type": "integer", "minimum": 1, "maximum": 32 }
+                        },
+                        "additionalProperties": false
+                    },
+                    "rclone": {
+                        "type": "object",
+                        "properties": {
+                            "remote": { "type": "string", "description": "rclone リモート（例: \"mycrypt:\"、\"gdrive:backups\"）" },
+                            "bucket": { "type": "string", "description": "S3 バケット名（リモート直下のフォルダ）" },
+                            "port": { "type": ["integer", "null"], "minimum": 1, "maximum": 65535 },
+                            "configPath": { "type": ["string", "null"] }
                         },
                         "additionalProperties": false
                     }

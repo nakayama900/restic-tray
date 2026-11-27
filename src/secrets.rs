@@ -78,6 +78,17 @@ impl SecretsReadiness {
             && self.has_secret_access_key
             && self.has_restic_password
     }
+
+    /// Completeness for the active storage backend: the rclone `serve s3` adapter needs no R2
+    /// credentials (rclone keeps its own in `rclone.conf`), only the Restic password.
+    pub fn is_complete_for(&self, backend: crate::config::StorageBackend) -> bool {
+        match backend {
+            crate::config::StorageBackend::Rclone => {
+                !self.vault_unreadable && self.has_restic_password
+            }
+            _ => self.is_complete(),
+        }
+    }
 }
 
 fn has_non_empty(value: &Option<String>) -> bool {

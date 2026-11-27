@@ -23,6 +23,8 @@ eframe = { version = "0.37", default-features = false, features = ["accesskit", 
 egui = "0.37"
 hmac = "0.13"
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Pure-Rust Pkl evaluator used to read config.pkl; network/package imports disabled.
+pklr = { version = "6", default-features = false, features = ["native-io"] }
 md-5 = "0.11"
 open = "5.3"
 quick-xml = "0.41"

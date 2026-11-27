@@ -594,23 +594,34 @@ impl ResticTrayApp {
             )
         };
         let cfg = self.controller.get_config();
-        let (store_value, store_sub, store_alert) = if cfg.r2.bucket.trim().is_empty() {
-            (
+        let (store_value, store_sub, store_alert) = match cfg.storage_backend {
+            crate::config::StorageBackend::Rclone if cfg.rclone.is_configured() => (
+                cfg.rclone.normalized_bucket(),
+                format!("Rclone アダプタ（{}）", cfg.rclone.normalized_remote()),
+                false,
+            ),
+            crate::config::StorageBackend::Rclone => (
+                "未設定".to_owned(),
+                "Rclone のリモートを指定してください".to_owned(),
+                true,
+            ),
+            _ if cfg.r2.bucket.trim().is_empty() => (
                 "未設定".to_owned(),
                 "R2 のバケットを指定してください".to_owned(),
                 true,
-            )
-        } else {
-            let prefix = cfg.r2.prefix.trim().trim_matches('/');
-            (
-                cfg.r2.bucket.trim().to_owned(),
-                if prefix.is_empty() {
-                    "バケット直下".to_owned()
-                } else {
-                    format!("/{prefix}")
-                },
-                false,
-            )
+            ),
+            _ => {
+                let prefix = cfg.r2.prefix.trim().trim_matches('/');
+                (
+                    cfg.r2.bucket.trim().to_owned(),
+                    if prefix.is_empty() {
+                        "バケット直下".to_owned()
+                    } else {
+                        format!("/{prefix}")
+                    },
+                    false,
+                )
+            }
         };
         let bin = &rep.restic_binary;
         let (restic_value, restic_sub) = if bin.available {

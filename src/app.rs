@@ -172,6 +172,15 @@ struct SettingsForm {
     region: String,
     max_connections: u32,
     restic_path: String,
+    backend_rclone: bool,
+    rclone_remote: String,
+    rclone_bucket: String,
+    rclone_port: String,
+    rclone_path: String,
+    rclone_config: String,
+    use_gitignore: bool,
+    /// One ignore file per line (`ignoreFiles`).
+    ignore_files: String,
     schedule_enabled: bool,
     interval_minutes: u64,
     daily: bool,
@@ -224,6 +233,14 @@ impl SettingsForm {
             region: cfg.r2.region.clone(),
             max_connections: cfg.r2.max_connections,
             restic_path: cfg.restic_binary_path.clone().unwrap_or_default(),
+            backend_rclone: cfg.storage_backend == crate::config::StorageBackend::Rclone,
+            rclone_remote: cfg.rclone.remote.clone(),
+            rclone_bucket: cfg.rclone.bucket.clone(),
+            rclone_port: cfg.rclone.port.map(|p| p.to_string()).unwrap_or_default(),
+            rclone_path: cfg.rclone.binary_path.clone().unwrap_or_default(),
+            rclone_config: cfg.rclone.config_path.clone().unwrap_or_default(),
+            use_gitignore: cfg.use_gitignore,
+            ignore_files: cfg.ignore_files.join("\n"),
             schedule_enabled: cfg.schedule.enabled,
             interval_minutes: cfg.schedule.interval_minutes,
             daily,
@@ -280,6 +297,25 @@ impl SettingsForm {
         if !name.is_empty() {
             let _ = crate::config::normalize_machine_name(name)?;
         }
+        if self.backend_rclone {
+            let rclone = crate::config::RcloneConfig {
+                remote: self.rclone_remote.clone(),
+                bucket: self.rclone_bucket.clone(),
+                ..Default::default()
+            };
+            rclone.validate_remote()?;
+        }
+        for entry in self.ignore_files.lines() {
+            let entry = entry.trim();
+            let invalid = !entry.is_empty()
+                && (entry.chars().any(|c| c.is_control())
+                    || entry.split(['/', '\\']).any(|seg| seg == ".."));
+            if invalid {
+                return Err(crate::error::AppError::Config(format!(
+                    "ignoreFiles に使えないパスが含まれています: {entry}"
+                )));
+            }
+        }
         Ok(())
     }
 
@@ -298,6 +334,33 @@ impl SettingsForm {
         cfg.r2.region = optional(&self.region).unwrap_or_else(|| "auto".to_owned());
         cfg.r2.max_connections = self.max_connections;
         cfg.restic_binary_path = optional(&self.restic_path);
+        cfg.storage_backend = if self.backend_rclone {
+            crate::config::StorageBackend::Rclone
+        } else {
+            crate::config::StorageBackend::R2
+        };
+        cfg.rclone.remote = self.rclone_remote.trim().to_owned();
+        cfg.rclone.bucket = if self.rclone_bucket.trim().is_empty() {
+            "restic".to_owned()
+        } else {
+            self.rclone_bucket.trim().to_owned()
+        };
+        cfg.rclone.port = self
+            .rclone_port
+            .trim()
+            .parse::<u16>()
+            .ok()
+            .filter(|p| *p > 0);
+        cfg.rclone.binary_path = optional(&self.rclone_path);
+        cfg.rclone.config_path = optional(&self.rclone_config);
+        cfg.use_gitignore = self.use_gitignore;
+        cfg.ignore_files = self
+            .ignore_files
+            .lines()
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect();
         cfg.schedule.enabled = self.schedule_enabled;
         cfg.schedule.interval_minutes = self.interval_minutes.max(1);
         cfg.schedule.daily_at = if self.daily {
@@ -444,6 +507,7 @@ pub struct ResticTrayApp {
     secrets_draft: SecretsDraft,
     reveal_secrets: bool,
     show_advanced_r2: bool,
+    show_advanced_rclone: bool,
     show_danger_r2: bool,
     delete_confirm_input: String,
     delete_hold_started: Option<f64>,
@@ -539,6 +603,7 @@ impl ResticTrayApp {
             secrets_draft: SecretsDraft::default(),
             reveal_secrets: false,
             show_advanced_r2: false,
+            show_advanced_rclone: false,
             show_danger_r2: false,
             delete_confirm_input: String::new(),
             delete_hold_started: None,
@@ -2534,6 +2599,7 @@ impl eframe::App for ResticTrayApp {
         }
         // Quit from the tray menu is handled outside the frame loop; the window closes here.
         if self.controller.is_quit_requested() {
+            crate::rclone::shutdown();
             ctx.send_viewport_cmd(egui::ViewportCommand::Close);
         }
         // Closing or minimizing the window keeps the app (scheduler + MCP bridge) alive in the tray.

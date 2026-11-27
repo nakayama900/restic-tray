@@ -6,11 +6,13 @@
 | :--- | :--- |
 | [`src/main.rs`](../src/main.rs) | CLI 引数解析 (`--mcp`, `--minimized`, `--config`, `--tab`, `--light`, `--screenshot`, `--version`) とモード分岐 |
 | [`src/lib.rs`](../src/lib.rs) | バックグラウンドスケジューラ・名前付きパイプ MCP ブリッジ・`eframe` ネイティブウィンドウの初期化 |
-| [`src/config.rs`](../src/config.rs) | `config.json` のスキーマ定義、Cloudflare R2 リポジトリ URL 構築、複数 PC 設定 (`machineName`, `defaultProjectRoot`, `maintenanceRole`, `projectKey`, `writerState`, `schedule.maintenanceAt`, `agent.allowHandoff`)、廃止キー (`googleDrive`, `rcloneBinaryPath`, `storageBackend`) の読み込み互換、および `dunce::canonicalize` 付きターゲット追加・削除・アトミック書き込み |
+| [`src/config.rs`](../src/config.rs) | `config.json` のスキーマ定義、Cloudflare R2 リポジトリ URL 構築、複数 PC 設定 (`machineName`, `defaultProjectRoot`, `maintenanceRole`, `projectKey`, `writerState`, `schedule.maintenanceAt`, `agent.allowHandoff`)、廃止キー (`googleDrive`, `rcloneBinaryPath`) の読み込み互換、Pkl 設定 (`config.pkl`) 評価、および `dunce::canonicalize` 付きターゲット追加・削除・アトミック書き込み |
 | [`src/secrets.rs`](../src/secrets.rs) | Windows DPAPI (`CryptProtectData` / `CryptUnprotectData`) + 二次エントロピー + `Zeroize` による `credentials.dat` 暗号化ストア（R2 キー・Restic パスワード） |
 | [`src/fs_safety.rs`](../src/fs_safety.rs) | バックアップ対象ディレクトリの正規化検証・リストア先ディレクトリのシステムパス保護・未解決 Reparse Point 拒否・`.git` / `Temp\UnityLockfile` 検知・Windows パス ↔ Restic サブパス変換 |
 | [`src/restic/sidecar.rs`](../src/restic/sidecar.rs) | `config.json` 指定パス → バイナリ隣 / `binaries/` → システム `PATH` の順での `restic.exe` 解決 |
 | [`src/restic/runner.rs`](../src/restic/runner.rs) | シェル非経由 (`std::process::Command` + `CREATE_NO_WINDOW`) での `restic` 実行、環境変数経由での R2 認証注入、1 対象 = 1 スナップショットのバックアップ、`--host` / `--retry-lock`（終了コード 11 識別）/ `restore <id>:<subpath> --delete --exclude` / 複数 PC 対応 `forget --prune` / 安全な `unlock`、`--json` ストリーム解析 |
+| [`src/rclone.rs`](../src/rclone.rs) | `rclone serve s3` ループバックアダプタ（`127.0.0.1` のみ・匿名・設定変更で再起動）|
+| [`src/restic/ignore.rs`](../src/restic/ignore.rs) | `.gitignore`・カスタム無視ファイルの Restic 除外パターン変換 |
 | [`src/r2_s3.rs`](../src/r2_s3.rs) | 純 Rust 製 Cloudflare R2 S3 互換 API クライアント（AWS SigV4 / Windows Schannel TLS）。プレフィックス配下のみの削除（`prefixOnly`）およびバケット全体の空化＋`DeleteBucket`（`entireBucket`）、未完了マルチパートアップロードの中止、Dry-Run 集計、進捗・中断制御、403 権限不足時の案内 |
 | [`src/restic/excludes.rs`](../src/restic/excludes.rs) | バックアップから外すパスの決定。`--exclude` / `--exclude-if-present` 引数の組み立て、Unity プロジェクト直下のフォルダの検出、対象フォルダそのものに一致するパターンの拒否、引き継ぎ `restore --delete` 用の相対 `--exclude` 構築（Unity・マーカーフォルダ保護）、除外設定のハッシュ |
 | [`src/db.rs`](../src/db.rs) | `rusqlite` (bundled, WAL モード) による `backup_runs` 履歴（`'deferred'` 延期記録を含む）、`audit_logs` 監査ログ、複数 PC 同期状態 (`project_sync_state`)、リポジトリ確認メタ (`sync_meta`) の永続化 |

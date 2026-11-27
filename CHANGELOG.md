@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Rclone `serve s3` storage backend**: `storageBackend: "rclone"` runs `rclone serve s3 --addr 127.0.0.1:<port>` as a loopback-only anonymous local S3 adapter in front of any rclone remote (including `crypt:` remotes for client-side Rclone Crypto on top of Restic encryption), while Restic keeps using its standard S3 backend. Configurable `rclone.remote`, `rclone.bucket` (mapped to a directory under the remote root), fixed port, `rclone.exe` and `rclone.conf` overrides; the adapter restarts automatically when settings change and stops on app exit. R2 credentials are not required for this backend.
+- **Gitignore & custom ignore files**: opt-in `useGitignore` honors each backup target's root `.gitignore`, and `ignoreFiles` adds custom gitignore-syntax ignore files (relative to each target or absolute). Patterns convert to Restic exclude rules (anchoring and `!` negations preserved) for backup, restore-overwrite protection and the excludes fingerprint.
+- **Pkl configuration support**: when `config.json` does not exist, a sibling `config.pkl` (Apple Pkl) is evaluated with the pure-Rust `pklr` evaluator (network/package imports disabled). Saving continues to write `config.json`, which then takes precedence.
+- MCP `update_storage_config` now accepts `storageBackend: "rclone"` and a `rclone` section; `get_status` reports the active backend.
+
 ## [1.0.0] - 2026-11-26
 
 First public release of **Restic Tray** (`restic-tray`), a pure-Rust Windows system tray application for periodic client-side encrypted backups to Cloudflare R2 via [Restic](https://restic.net/), with a built-in Model Context Protocol (MCP) server.
