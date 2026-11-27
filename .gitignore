@@ -1,0 +1,11 @@
+/target/
+/binaries/*.exe
+!/binaries/.gitkeep
+*.db
+*.db-shm
+*.db-wal
+*.dat
+*.tmp
+.env
+.env.*
+.claude/worktrees/

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>初期設定と Cloudflare R2 | Restic Tray ドキュメント</title>
+  <meta name="description" content="Cloudflare R2 バケット作成、Object Read &amp; Write 最小権限トークン発行、Restic Tray への設定入力と DPAPI 保護、トークン漏洩時の対処手順。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/setup.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/setup.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="初期設定と Cloudflare R2 | Restic Tray ドキュメント">
+  <meta property="og:description" content="Cloudflare R2 バケット作成、Object Read &amp; Write 最小権限トークン発行、Restic Tray への設定入力と DPAPI 保護、トークン漏洩時の対処手順。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/setup.html">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="初期設定と Cloudflare R2 | Restic Tray ドキュメント">
+  <meta name="twitter:description" content="Cloudflare R2 バケット作成、Object Read &amp; Write 最小権限トークン発行、Restic Tray への設定入力と DPAPI 保護、トークン漏洩時の対処手順。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"},{"@type":"ListItem","position":3,"name":"初期設定と Cloudflare R2","item":"https://nayuengin.github.io/restic-tray/ja/docs/setup.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"初期設定と Cloudflare R2 の準備","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/setup.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/setup.html" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: 初期設定と Cloudflare R2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html" aria-current="page">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html" aria-current="page">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./">ドキュメント</a></li>
+          <li aria-current="page">初期設定と Cloudflare R2</li>
+          </ol>
+        </nav>
+
+        <h1>初期設定と Cloudflare R2 の準備</h1>
+        <p class="doc-lead">Cloudflare R2 バケットと最小権限 API トークンを作成し、Windows DPAPI で安全に認証情報を保存してリポジトリを初期化する手順です。</p>
+
+        <p>Restic Tray はバックアップの保存先として <strong>Cloudflare R2</strong>（S3 互換オブジェクトストレージ）を使用します。ここでは Cloudflare ダッシュボードで専用バケットと最小権限の API トークンを作成し、Restic Tray でリポジトリを初期化するまでを案内します。</p>
+
+        <aside class="callout" aria-label="Cloudflare R2 の有効化と料金条件">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Cloudflare R2 の有効化と料金条件</span></div>
+  <p>無料枠の範囲内で使う場合でも、Cloudflare 側の仕様により支払い方法（クレジットカード等）の登録が必要です。R2 は取り出し（エグレス）料金がかからないため、復元や定期的な読み戻し確認でも転送料を気にせず運用できます。最新の条件や画面項目名は <a href="https://developers.cloudflare.com/r2/pricing/" rel="noopener noreferrer">Cloudflare R2 Pricing</a> および <a href="https://developers.cloudflare.com/r2/api/tokens/" rel="noopener noreferrer">R2 API Tokens ドキュメント</a> を確認してください。</p>
+</aside>
+
+        <h2 id="create-bucket">1. バックアップ専用バケットを作成する</h2>
+        <ol>
+          <li>Cloudflare ダッシュボード（<code>https://dash.cloudflare.com/</code>）にログインし、左メニューの <strong>R2 Object Storage</strong> を開きます。</li>
+          <li><strong>Overview &rarr; Create bucket</strong> をクリックします。</li>
+          <li><strong>Bucket name</strong> を入力します（3&ndash;63 文字の英小文字 <code>a-z</code>、数字 <code>0-9</code>、ハイフン <code>-</code> のみ。先頭・末尾のハイフン不可。例: <code>my-restic-backups</code>）。</li>
+          <li><strong>Location</strong>（通常は既定の Automatic または最寄り地域の Location Hint）と <strong>Default Storage Class</strong>（通常は <strong>Standard</strong>）を確認し、<strong>Create bucket</strong> をクリックします。</li>
+        </ol>
+
+        <h2 id="account-id">2. 32 文字のアカウント ID を確認する</h2>
+        <p>Restic Tray はアカウント ID から S3 互換エンドポイント（<code>https://&lt;ACCOUNT_ID&gt;.r2.cloudflarestorage.com</code>）を自動で組み立てます。32 文字の 16 進文字列である <strong>Account ID</strong> は次のいずれかで確認できます。</p>
+        <ul>
+          <li>R2 の <strong>Overview</strong> 画面右側にある <strong>Account Details</strong> の <strong>Account ID</strong></li>
+          <li>ダッシュボードの URL（<code>https://dash.cloudflare.com/&lt;ACCOUNT_ID&gt;/r2/...</code>）の <code>&lt;ACCOUNT_ID&gt;</code> 部分</li>
+        </ul>
+
+        <h2 id="api-token">3. 最小権限の R2 API トークンを作成する</h2>
+        <ol>
+          <li>R2 の <strong>Overview</strong> 画面右側 <strong>Account Details</strong> にある <strong>API Tokens</strong> の横の <strong>Manage</strong>（または <strong>Manage R2 API Tokens</strong>）をクリックします。</li>
+          <li><strong>Account API tokens</strong>（ユーザー構成の変更に左右されにくく長期運用に向くため推奨）を選び、<strong>Create Account API token</strong> をクリックします。</li>
+          <li><strong>Token name</strong> に用途が分かる名前を付けます（例: <code>restic-tray-main-pc</code>）。PC ごとにトークンを分けておくと、紛失時に該当 PC 分だけ失効できて安全です。</li>
+          <li><strong>Permissions（権限）</strong>を下表の基準で選択します。</li>
+        </ol>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="r2-perms-ja-caption">
+  <table>
+    <caption id="r2-perms-ja-caption">Cloudflare R2 API トークンの権限選択</caption>
+    <thead>
+      <tr>
+        <th scope="col">権限</th>
+        <th scope="col">バケット限定</th>
+        <th scope="col">できること</th>
+        <th scope="col">推奨用途</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>Object Read &amp; Write</strong></th>
+        <td data-label="バケット限定">可能（<strong>Specify bucket(s)</strong>）</td>
+        <td data-label="できること">バックアップ、一覧取得、復元、整合性チェック、<code>forget --prune</code>、プレフィックス配下削除、バケット内の全オブジェクト削除（空化）。</td>
+        <td data-label="推奨用途"><strong>通常のバックアップ運用（最小権限・推奨）。</strong>バケット本体の削除（<code>DeleteBucket</code>）のみ <code>403 AccessDenied</code> になるため、空化後に Cloudflare ダッシュボードからバケットを削除します。</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>Admin Read &amp; Write</strong></th>
+        <td data-label="バケット限定">不可（アカウント内の全 R2 バケット）</td>
+        <td data-label="できること">上記すべてに加え、Restic Tray からのバケット本体の一括削除。</td>
+        <td data-label="推奨用途">アプリからバケット本体まで直接削除したい場合のみ（通常運用では非推奨）。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+        <ol start="5">
+          <li><strong>Specify bucket(s)</strong> で <strong>Apply to specific buckets only</strong> を選び、手順 1 で作成したバックアップ専用バケットだけを指定します。</li>
+          <li><strong>TTL（有効期限）</strong>を <strong>Forever</strong>（無期限）または任意の期限に設定します（期限を設けた場合は期限切れ前に再発行して更新してください）。</li>
+          <li><strong>Create Account API Token</strong> をクリックし、完了画面に表示される <strong>Access Key ID</strong> と <strong>Secret Access Key</strong> を控えます。</li>
+        </ol>
+        <aside class="callout callout-warn" aria-label="アクセスキーは 1 度しか表示されません">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>アクセスキーは 1 度しか表示されません</span></div>
+  <p><strong>Access Key ID</strong> と <strong>Secret Access Key</strong> は作成直後の画面で 1 度しか表示されません。控える前に画面を閉じた場合は、新しいトークンを発行し、不要になった古いトークンを Revoke / Delete してください。</p>
+</aside>
+
+        <h2 id="configure-app">4. Restic Tray に入力して初期化する</h2>
+        <figure>
+          <picture>
+  <source srcset="../../assets/screenshots/settings.webp" type="image/webp">
+  <img src="../../assets/screenshots/settings.png" alt="Restic Tray の設定画面。保存先（アカウント ID・バケット・バケット内のフォルダ）と DPAPI 認証情報の入力欄を表示" width="1240" height="820" loading="lazy">
+</picture>
+          <figcaption>設定（<code>設定</code>）画面の保存先と認証情報セクション（架空のデモ値）。</figcaption>
+        </figure>
+        <ol>
+          <li><strong>Restic Tray</strong> を起動し、左メニューの <strong>設定</strong> を開きます。</li>
+          <li>次の対応表に沿って入力します。</li>
+        </ol>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="r2-mapping-ja-caption">
+  <table>
+    <caption id="r2-mapping-ja-caption">Cloudflare R2 の値と Restic Tray 設定画面の対応表</caption>
+    <thead>
+      <tr>
+        <th scope="col">Cloudflare 側の値</th>
+        <th scope="col">Restic Tray（設定画面）の入力欄</th>
+        <th scope="col">保存先</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>Account ID</strong>（32 文字の 16 進文字列）</th>
+        <td data-label="Restic Tray（設定画面）の入力欄">保存先 &rarr; <strong>アカウント ID</strong></td>
+        <td data-label="保存先"><code>config.json</code>（平文・非秘密）</td>
+      </tr>
+      <tr>
+        <th scope="row">作成した <strong>Bucket name</strong></th>
+        <td data-label="Restic Tray（設定画面）の入力欄">保存先 &rarr; <strong>バケット</strong></td>
+        <td data-label="保存先"><code>config.json</code>（平文・非秘密）</td>
+      </tr>
+      <tr>
+        <th scope="row">任意（例: <code>workstation</code>、空欄ならバケット直下）</th>
+        <td data-label="Restic Tray（設定画面）の入力欄">保存先 &rarr; <strong>バケット内のフォルダ</strong></td>
+        <td data-label="保存先"><code>config.json</code>（平文・非秘密）</td>
+      </tr>
+      <tr>
+        <th scope="row">API トークンの <strong>Access Key ID</strong></th>
+        <td data-label="Restic Tray（設定画面）の入力欄">認証情報 &rarr; <strong>アクセスキー ID</strong></td>
+        <td data-label="保存先"><code>config\credentials.dat</code>（Windows DPAPI 暗号化）</td>
+      </tr>
+      <tr>
+        <th scope="row">API トークンの <strong>Secret Access Key</strong></th>
+        <td data-label="Restic Tray（設定画面）の入力欄">認証情報 &rarr; <strong>シークレットアクセスキー</strong></td>
+        <td data-label="保存先"><code>config\credentials.dat</code>（Windows DPAPI 暗号化）</td>
+      </tr>
+      <tr>
+        <th scope="row">利用者が決める強力なパスワード</th>
+        <td data-label="Restic Tray（設定画面）の入力欄">認証情報 &rarr; <strong>リポジトリのパスワード</strong></td>
+        <td data-label="保存先"><code>config\credentials.dat</code>（Windows DPAPI 暗号化）</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+        <aside class="callout callout-caution" aria-label="リポジトリのパスワードは必ずアプリの外にも保管してください">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>リポジトリのパスワードは必ずアプリの外にも保管してください</span></div>
+  <p><code>config\credentials.dat</code> は Windows DPAPI で「その PC のその Windows ユーザー」に紐づけて暗号化されるため、PC の故障・紛失や Windows 再インストール時には復号できません。R2 の API トークンは Cloudflare ダッシュボードで再発行できますが、<strong>リポジトリのパスワードを失うと R2 上の暗号化バックアップは二度と復元できません</strong>。パスワード管理ツールやオフラインの控えに必ず保存してください。</p>
+</aside>
+        <ol start="3">
+          <li>画面下部の保存バーで <strong>保存</strong>（<kbd>Ctrl</kbd>+<kbd>S</kbd>）を押し、保存先設定を <code>config.json</code> に書き込みます。</li>
+          <li>認証情報欄の <strong>認証情報を保存</strong> を押し、Windows DPAPI で暗号化して保存します。</li>
+          <li>新しいバケット／プレフィックスの場合は <strong>リポジトリを作成</strong> を実行します（他の PC で初期化済みのリポジトリへ繋ぐ場合は <strong>接続を確認</strong> を実行します）。</li>
+          <li>接続できたら <strong>フォルダ</strong> 画面で対象を追加し、<strong>概要</strong> 画面で <strong>テスト実行</strong>（Dry-Run）を確認してから <strong>今すぐバックアップ</strong> を実行してください。</li>
+        </ol>
+
+        <h2 id="prefix">バケット内のフォルダ（プレフィックス）の使い分け</h2>
+        <ul>
+          <li><strong>1 台だけで使う場合</strong>: 空欄（バケット直下）でも、PC 名などのプレフィックス（既定は <code>restic-windows</code>、例: <code>workstation</code>）を付けても構いません。プレフィックスを付けると同じバケット内に用途別リポジトリを分けられ、プレフィックス配下だけの削除も行えます。</li>
+          <li><strong>複数 PC で共有リポジトリを使う場合</strong>: 共有する PC すべてで <strong>同じアカウント ID・バケット・プレフィックス・リポジトリのパスワード</strong> を指定してください。API トークンは PC ごとに別々で構いません。</li>
+        </ul>
+
+        <h2 id="token-rotation">API トークンが漏洩したときの対処</h2>
+        <p>万が一 <strong>Access Key ID</strong> や <strong>Secret Access Key</strong> をログや公開 Issue 等へ誤って貼ってしまった場合は、次の順で対処してください。</p>
+        <ol>
+          <li>Cloudflare ダッシュボードの <strong>R2 Object Storage &rarr; Manage R2 API Tokens</strong> で該当トークンを直ちに <strong>Revoke / Delete</strong> します。</li>
+          <li>新しい API トークン（<strong>Object Read &amp; Write</strong>・対象バケット限定）を発行します。</li>
+          <li>Restic Tray の <strong>設定 &rarr; 認証情報</strong> に新しい <strong>アクセスキー ID</strong> と <strong>シークレットアクセスキー</strong> を入力し、<strong>認証情報を保存</strong> します（リポジトリのパスワード欄を空欄のまま保存すれば既存のパスワードが維持されます）。</li>
+          <li><strong>接続を確認</strong> を実行し、新しいトークンで接続できることを確かめます。</li>
+        </ol>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link prev" href="installation.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>前へ</span>
+          <span class="pager-title">導入と検証</span>
+        </a>
+        <a class="pager-link next" href="usage.html">
+          <span class="pager-dir">次へ<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">基本操作</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#create-bucket">1. バケット作成</a></li>
+          <li><a href="#account-id">2. アカウント ID 確認</a></li>
+          <li><a href="#api-token">3. API トークン作成</a></li>
+          <li><a href="#configure-app">4. アプリ設定と初期化</a></li>
+          <li><a href="#prefix">プレフィックスの使い分け</a></li>
+          <li><a href="#token-rotation">漏洩時のローテーション</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

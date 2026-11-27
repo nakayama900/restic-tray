@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>よくある質問・サポート方針 | Restic Tray ドキュメント</title>
+  <meta name="description" content="Restic Tray のよくある質問とサポート方針：暗号化、PC 紛失時の復旧、Windows 自動起動、Unity 除外、SmartScreen、テレメトリ、免責事項。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/faq.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/faq.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="よくある質問・サポート方針 | Restic Tray ドキュメント">
+  <meta property="og:description" content="Restic Tray のよくある質問とサポート方針：暗号化、PC 紛失時の復旧、Windows 自動起動、Unity 除外、SmartScreen、テレメトリ、免責事項。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/faq.html">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="よくある質問・サポート方針 | Restic Tray ドキュメント">
+  <meta name="twitter:description" content="Restic Tray のよくある質問とサポート方針：暗号化、PC 紛失時の復旧、Windows 自動起動、Unity 除外、SmartScreen、テレメトリ、免責事項。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"},{"@type":"ListItem","position":3,"name":"よくある質問・サポート方針","item":"https://nayuengin.github.io/restic-tray/ja/docs/faq.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"よくある質問・サポート方針","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/faq.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Windows を起動したら自動で動きますか？","acceptedAnswer":{"@type":"Answer","text":"現時点では自動登録されません。Win + R から shell:startup を開き、restic-tray.exe --minimized のショートカットを配置してください。"}},{"@type":"Question","name":"PC をなくしたら復元できますか？ パスワードを忘れたらどうなりますか？","acceptedAnswer":{"@type":"Answer","text":"リポジトリのパスワードを別の場所に控えてあれば新しい PC から復元できます。credentials.dat は元の PC とユーザーでしか復号できないため、パスワードを忘れると復元できません。"}},{"@type":"Question","name":"Cloudflare はバックアップしたファイルの中身を読めますか？","acceptedAnswer":{"@type":"Answer","text":"読めません。ファイルの中身・ファイル名・メタデータは送信前に PC 上で restic が暗号化し、パスワードは PC の外に出ません。"}},{"@type":"Question","name":"Unity の Library フォルダがバックアップに入っていないのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"Unity プロジェクト直下の Library や Temp 等は再生成可能なキャッシュのため既定で除外しています。Assets や Packages 内の同名フォルダは除外されません。"}},{"@type":"Question","name":"Git のリポジトリもバックアップできますか？","acceptedAnswer":{"@type":"Answer","text":"できます。.git を含めフォルダ全体が保存されます。ただし複数 PC 引き継ぎ（projectKey）は .git を含むフォルダには使えません。"}},{"@type":"Question","name":"Cloudflare R2 の料金はどのくらいかかりますか？","acceptedAnswer":{"@type":"Answer","text":"最新の無料枠と単価は Cloudflare R2 Pricing を参照してください。R2 はエグレス料金が無料です。"}},{"@type":"Question","name":"インストーラで Windows SmartScreen の警告が出るのはなぜですか？","acceptedAnswer":{"@type":"Answer","text":"初期リリースはコード署名なしで配布しているためです。実行前に SHA256SUMS.txt と gh attestation verify を確認してください。"}},{"@type":"Question","name":"Cloudflare R2 以外の保存先、macOS/Linux、英語 UI に対応予定はありますか？","acceptedAnswer":{"@type":"Answer","text":"現在の対応範囲は Windows 10 以降 x64（TLS 1.2 以降）・Cloudflare R2・日本語 UI です。範囲外の要望は GitHub Issues で受け付けていますが実装は約束していません。"}},{"@type":"Question","name":"自分の R2 バケット以外にデータを送信しますか？","acceptedAnswer":{"@type":"Answer","text":"送信しません。作者運営のサーバー、テレメトリ、更新確認通信はいずれもありません。"}},{"@type":"Question","name":"新しいバージョンが出たことをどう知ればよいですか？","acceptedAnswer":{"@type":"Answer","text":"GitHub リポジトリ nayuengin/restic-tray の Watch -> Custom -> Releases を有効にしてください。"}}]}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/faq.html" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: よくある質問・サポート方針</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html" aria-current="page">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html" aria-current="page">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./">ドキュメント</a></li>
+          <li aria-current="page">よくある質問・サポート方針</li>
+          </ol>
+        </nav>
+
+        <h1>よくある質問・サポート方針</h1>
+        <p class="doc-lead">暗号化、PC 紛失時の復旧、自動起動、Unity 除外、R2 料金、プライバシー、サポート方針と免責事項をまとめています。</p>
+
+        <section class="accordion" aria-labelledby="faq-list-ja-heading">
+          <h2 id="faq-list-ja-heading">よくある質問</h2>
+          <details>
+            <summary>Windows を起動したら自動で動きますか？</summary>
+            <div class="accordion-body"><p>現時点では自動登録されません。定期バックアップと未実施通知はアプリが動いている間だけ働くため、<kbd>Win</kbd> + <kbd>R</kbd> &rarr; <code>shell:startup</code> に <code>restic-tray.exe --minimized</code> のショートカットを置いてください（<a href="installation.html#startup">サインイン時の自動起動</a>）。</p></div>
+          </details>
+          <details>
+            <summary>PC をなくしたら復元できますか？ パスワードを忘れたらどうなりますか？</summary>
+            <div class="accordion-body"><p>リポジトリのパスワードを別の場所に控えてあれば、新しい PC から復元できます（R2 の API トークンは Cloudflare ダッシュボードで再発行できます）。<code>credentials.dat</code> は元の PC のその Windows ユーザーでしか復号できないため、パスワードを忘れると R2 上のバックアップは二度と復元できません。</p></div>
+          </details>
+          <details>
+            <summary>Cloudflare はバックアップしたファイルの中身を読めますか？</summary>
+            <div class="accordion-body"><p>読めません。ファイルの中身・ファイル名・メタデータはすべて送信前に PC 上で restic が AES-256-CTR と Poly1305-AES で暗号化し、パスワードは PC の外に出ません。</p></div>
+          </details>
+          <details>
+            <summary>Unity の Library フォルダがバックアップに入っていないのはなぜですか？</summary>
+            <div class="accordion-body"><p>Unity プロジェクト直下の <code>Library</code>、<code>Temp</code>、<code>Logs</code>、<code>obj</code>、<code>Build</code>、<code>Builds</code>、<code>Assets\SerializedUdonPrograms</code> は再生成できるキャッシュのため、容量と転送時間を節約する目的で既定で除外しています（<code>useBasicExcludes: true</code>）。<code>Assets</code> や <code>Packages</code> 内の同名フォルダは除外されません。生成物も残したい場合は <strong>フォルダ</strong> 画面で <strong>基本の除外パターンを有効にする</strong> をオフにしてください。</p></div>
+          </details>
+          <details>
+            <summary>Git のリポジトリもバックアップできますか？</summary>
+            <div class="accordion-body"><p>できます。<code>.git</code> を含めてフォルダ全体が保存されます（除外されるのは一時ファイル <code>.git/objects/pack/tmp_pack_*</code> のみ）。ただし複数 PC の引き継ぎ機能（<code>projectKey</code>）は <code>.git</code> を含むフォルダには使えないため、コードの同期は Git で行ってください。</p></div>
+          </details>
+          <details>
+            <summary>Cloudflare R2 の料金はどのくらいかかりますか？</summary>
+            <div class="accordion-body"><p>最新の無料枠と単価は <a href="https://developers.cloudflare.com/r2/pricing/" rel="noopener noreferrer">Cloudflare R2 Pricing</a> を参照してください。R2 はエグレス（取り出し）料金が無料で、restic の重複排除と基本の除外パターンにより保存容量も抑えられます。なお無料枠でも R2 有効化時に支払い方法の登録が必要です。</p></div>
+          </details>
+          <details>
+            <summary>インストーラで Windows SmartScreen の警告が出るのはなぜですか？</summary>
+            <div class="accordion-body"><p>初期リリースはコード署名なしで配布しているためです。実行前に「<a href="installation.html#verify">チェックサム照合とビルド来歴証明</a>」の手順で <code>SHA256SUMS.txt</code> と <code>gh attestation verify</code> を確認してください。</p></div>
+          </details>
+          <details>
+            <summary>Cloudflare R2 以外の保存先、macOS/Linux、英語 UI に対応予定はありますか？</summary>
+            <div class="accordion-body"><p>現在の対応範囲は Windows 10 / Windows Server 2016 以降（x64、TLS 1.2 以降必須）・Cloudflare R2・日本語 UI です。範囲外の要望も GitHub Issues でアイデアとして受け付けていますが、実装は約束していません。</p></div>
+          </details>
+          <details>
+            <summary>自分の R2 バケット以外にデータを送信しますか？</summary>
+            <div class="accordion-body"><p>送信しません。作者運営のサーバー、テレメトリ、更新確認通信はいずれもありません。</p></div>
+          </details>
+          <details>
+            <summary>新しいバージョンが出たことをどう知ればよいですか？</summary>
+            <div class="accordion-body"><p>アプリ内に自動更新確認はありません。GitHub リポジトリ <a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">nayuengin/restic-tray</a> の上部にある <strong>Watch &rarr; Custom &rarr; Releases</strong> を有効にすると新リリースの通知を受け取れます。</p></div>
+          </details>
+        </section>
+
+        <h2 id="support-policy">サポート方針と免責</h2>
+        <ul>
+          <li><strong>サポート対象バージョン</strong>: <strong>最新リリースのみ</strong>を対象とします。過去バージョンへの修正のバックポートは行いません。</li>
+          <li><strong>SLA なし</strong>: オーナー（<code>@nayuengin</code>）の指揮のもと AI メンテナ体制によるベストエフォート運用であり、返信や修正の期限（SLA）は約束しません。</li>
+          <li><strong>セマンティックバージョニング</strong>: <a href="https://semver.org/" rel="noopener noreferrer">SemVer</a> に従い、破壊的変更はメジャーバージョンでのみ行います。変更内容と移行手順は <a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">CHANGELOG.md</a> に記載します。</li>
+          <li><strong>対応範囲</strong>: Windows 10 / Windows Server 2016 以降（x64、TLS 1.2 以降必須）・Cloudflare R2・日本語 UI を前提としています。</li>
+          <li><strong>バックアップ内容の免責</strong>: <a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE" rel="noopener noreferrer">MIT ライセンス</a>の無保証条項に加え、<strong>本アプリはバックアップの完全性および復元可能性を保証しません</strong>。定期的な復元確認機能や手動のテスト復元により、復元できることを利用者自身で確認してください。</li>
+          <li><strong>セキュリティ報告</strong>: 脆弱性は公開 Issue ではなく、<a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">GitHub Private Vulnerability Reporting</a> から非公開で報告してください。</li>
+        </ul>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link prev" href="troubleshooting.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>前へ</span>
+          <span class="pager-title">トラブルシューティング</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#faq-list-ja-heading">よくある質問</a></li>
+          <li><a href="#support-policy">サポート方針と免責</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

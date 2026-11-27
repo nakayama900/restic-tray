@@ -1,0 +1,57 @@
+# Restic Tray
+
+> Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.
+> Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。
+
+## Key Facts
+
+- **Product Name**: Restic Tray (`restic-tray`)
+- **Version**: 1.0.0 (bundles official `restic.exe` v0.20.0, SHA-256 verified)
+- **License & Price**: MIT License, free ($0, open source)
+- **Supported OS**: Windows 10 / Windows 11 / Windows Server 2016 or later (x64, TLS 1.2+)
+- **Storage Backend**: Cloudflare R2 (`s3:https://<accountId>.r2.cloudflarestorage.com/<bucket>[/<prefix>]`, zero egress fees)
+- **Encryption**: Client-side AES-256-CTR + Poly1305-AES with `scrypt` key derivation via standard restic repository format (recoverable anytime with standalone `restic` CLI, no app lock-in)
+- **Secret Storage**: Windows DPAPI (`CryptProtectData` + secondary entropy + `Zeroize`) in `%LOCALAPPDATA%\io.github.nayuengin.restic-tray\config\credentials.dat`; secrets are never written to `config.json` or passed as CLI arguments
+- **Built-in MCP Server**: `restic-tray.exe --mcp` exposes 22 tools over stdio JSON-RPC 2.0 via a local Windows Named Pipe (`reject_remote_clients(true)` + 256-bit mutual token) with headless fallback; destructive operations (`forget_prune`, `delete_r2_bucket`, `takeover_project`) are opt-in (`false` by default) and default to `dryRun: true`
+- **Desktop UI Language**: Currently Japanese only (website and documentation are bilingual EN / JA)
+- **Telemetry & Network**: Zero telemetry, no author-operated servers, no built-in update checker
+- **Affiliation**: Independent unofficial open-source project; not affiliated with restic or Cloudflare
+- **Download**: https://github.com/nayuengin/restic-tray/releases/latest
+
+## Documentation (English)
+
+- [Home (English)](https://nayuengin.github.io/restic-tray/): Product overview, specifications, comparison with restic CLI, v1.0.0 download links, and FAQ.
+- [Overview](https://nayuengin.github.io/restic-tray/docs/): Documentation overview and guide index.
+- [Installation & Verification](https://nayuengin.github.io/restic-tray/docs/installation.html): Download bundles, SHA-256, attestations, and auto-start.
+- [Initial Setup & Cloudflare R2](https://nayuengin.github.io/restic-tray/docs/setup.html): Create an R2 bucket, least-privilege token, and repository.
+- [Basic Usage](https://nayuengin.github.io/restic-tray/docs/usage.html): Folders, smart excludes, schedules, verification, and history.
+- [MCP Integration](https://nayuengin.github.io/restic-tray/docs/mcp.html): Connect AI coding agents and explore all 22 MCP tools.
+- [Backup & Restore](https://nayuengin.github.io/restic-tray/docs/backup-restore.html): Dry-run, GUI/CLI restore, disaster recovery without the app.
+- [Troubleshooting](https://nayuengin.github.io/restic-tray/docs/troubleshooting.html): SmartScreen, DPAPI, R2 permissions, locks, and excludes.
+- [FAQ & Support Policy](https://nayuengin.github.io/restic-tray/docs/faq.html): Common questions, scope, privacy, and disclaimers.
+
+## Documentation (Japanese)
+
+- [トップページ（日本語）](https://nayuengin.github.io/restic-tray/ja/): 製品概要、基本仕様、restic CLI との比較、v1.0.0 ダウンロード導線、よくある質問。
+- [ドキュメント概要](https://nayuengin.github.io/restic-tray/ja/docs/): ドキュメント全体とガイド一覧。
+- [導入と検証](https://nayuengin.github.io/restic-tray/ja/docs/installation.html): 配布物の入手、SHA-256 照合、来歴証明、自動起動。
+- [初期設定と Cloudflare R2](https://nayuengin.github.io/restic-tray/ja/docs/setup.html): R2 バケットと最小権限トークンの作成、初期設定手順。
+- [基本操作](https://nayuengin.github.io/restic-tray/ja/docs/usage.html): フォルダ管理、除外設定、スケジュール、定期検証、履歴。
+- [MCP 統合](https://nayuengin.github.io/restic-tray/ja/docs/mcp.html): AI エージェント連携と全 22 ツールの仕様・安全設計。
+- [バックアップと復元](https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html): テスト実行、復元手順、新 PC 復旧、公式 CLI 復元。
+- [トラブルシューティング](https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html): SmartScreen、DPAPI、R2 権限、ロック、除外の対処。
+- [よくある質問・サポート方針](https://nayuengin.github.io/restic-tray/ja/docs/faq.html): FAQ、対応範囲、プライバシー、免責事項。
+
+## Full Context
+
+- [Full Single-File Documentation (`llms-full.txt`)](https://nayuengin.github.io/restic-tray/llms-full.txt): Complete self-contained Markdown reference covering specifications, installation, Cloudflare R2 setup, basic usage, built-in excludes, all 22 MCP tools, backup/restore procedures, troubleshooting, and FAQ.
+
+## Optional
+
+- [GitHub Repository (`nayuengin/restic-tray`)](https://github.com/nayuengin/restic-tray): Source code, issue tracker, and releases.
+- [Latest Release Downloads](https://github.com/nayuengin/restic-tray/releases/latest): Windows x64 NSIS installer, MSI installer, Portable ZIP, and `SHA256SUMS.txt`.
+- [Cloudflare R2 Setup Reference (Japanese)](https://github.com/nayuengin/restic-tray/blob/main/docs/CLOUDFLARE_R2_SETUP.md): Original repository Cloudflare R2 setup guide.
+- [MCP Tool Specification (Japanese)](https://github.com/nayuengin/restic-tray/blob/main/docs/AGENT.md): Original repository 22-tool MCP reference.
+- [Architecture & Security Boundary (Japanese)](https://github.com/nayuengin/restic-tray/blob/main/docs/ARCHITECTURE.md): Module map, DPAPI design, MCP trust boundary, and multi-PC handoff.
+- [Security Policy](https://github.com/nayuengin/restic-tray/blob/main/SECURITY.md): Security model, scope, and private vulnerability reporting (https://github.com/nayuengin/restic-tray/security/advisories/new).
+- [Changelog](https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md) / [MIT License](https://github.com/nayuengin/restic-tray/blob/main/LICENSE).

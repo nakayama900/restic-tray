@@ -1,0 +1,252 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify tag and quality gate
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Verify tag matches Cargo.toml version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          if ($env:RELEASE_TAG -notmatch '^v(?<ver>\d+\.\d+\.\d+)$') {
+            throw "Release tag must match vX.Y.Z (got '$($env:RELEASE_TAG)')"
+          }
+          $tagVer = $Matches['ver']
+          $toml = Get-Content -LiteralPath Cargo.toml -Raw -Encoding UTF8
+          $m = [regex]::Match($toml, '(?ms)^\[package\].*?^version\s*=\s*"(?<ver>\d+\.\d+\.\d+)"')
+          if (-not $m.Success) {
+            throw "Could not parse [package].version from Cargo.toml"
+          }
+          $cargoVer = $m.Groups['ver'].Value
+          if ($tagVer -ne $cargoVer) {
+            throw "Tag '$($env:RELEASE_TAG)' does not match Cargo.toml version 'v$cargoVer'"
+          }
+          Write-Host "Verified tag $($env:RELEASE_TAG) matches Cargo.toml v$cargoVer"
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@893d6ee8d714b6c7dfe2bcd94e5759e9a7958a7e # v2
+        with:
+          tool: cargo-deny
+
+      - name: Set up Python (for THIRD_PARTY_NOTICES.md freshness check)
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Download pinned restic.exe
+        shell: pwsh
+        run: ./scripts/download-restic.ps1
+
+      - name: Run full quality gate
+        shell: pwsh
+        run: ./scripts/verify.ps1 -RequireAll
+
+      - name: Verify THIRD_PARTY_NOTICES.md is up to date
+        shell: pwsh
+        run: python scripts/generate-third-party-notices.py --check
+
+  build-and-draft-release:
+    name: Build installers, attest provenance, and create draft release
+    needs: verify
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Set up Python (for deterministic icon generation)
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Ensure NSIS and WiX Toolset 3.14 are on PATH
+        shell: pwsh
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          # Locate or install NSIS
+          $nsisCandidates = @(
+            'C:\Program Files (x86)\NSIS',
+            'C:\Program Files\NSIS'
+          )
+          $makensis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+          if (-not $makensis) {
+            foreach ($dir in $nsisCandidates) {
+              if (Test-Path -LiteralPath (Join-Path $dir 'makensis.exe')) {
+                Add-Content -LiteralPath $env:GITHUB_PATH -Value $dir
+                $env:PATH = "$dir;$env:PATH"
+                $makensis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+                break
+              }
+            }
+          }
+          if (-not $makensis) {
+            Write-Host "Installing NSIS via Chocolatey..."
+            choco install nsis --no-progress -y
+            if ($LASTEXITCODE -ne 0) { throw "choco install nsis failed" }
+            foreach ($dir in $nsisCandidates) {
+              if (Test-Path -LiteralPath (Join-Path $dir 'makensis.exe')) {
+                Add-Content -LiteralPath $env:GITHUB_PATH -Value $dir
+                $env:PATH = "$dir;$env:PATH"
+                $makensis = Get-Command makensis.exe -ErrorAction SilentlyContinue
+                break
+              }
+            }
+          }
+          if (-not $makensis) { throw "makensis.exe could not be located on PATH" }
+          Write-Host "Using NSIS: $($makensis.Source)"
+
+          # Locate WiX Toolset 3.14 (candle.exe / light.exe)
+          $wixCandidates = @()
+          if ($env:WIX) {
+            $wixCandidates += (Join-Path $env:WIX 'bin')
+          }
+          $wixCandidates += @(
+            'C:\Program Files (x86)\WiX Toolset v3.14\bin',
+            'C:\Program Files\WiX Toolset v3.14\bin'
+          )
+          $candle = Get-Command candle.exe -ErrorAction SilentlyContinue
+          if (-not $candle) {
+            foreach ($dir in $wixCandidates) {
+              if ((Test-Path -LiteralPath (Join-Path $dir 'candle.exe')) -and (Test-Path -LiteralPath (Join-Path $dir 'light.exe'))) {
+                Add-Content -LiteralPath $env:GITHUB_PATH -Value $dir
+                $env:PATH = "$dir;$env:PATH"
+                $candle = Get-Command candle.exe -ErrorAction SilentlyContinue
+                break
+              }
+            }
+          }
+          if (-not $candle -or -not (Get-Command light.exe -ErrorAction SilentlyContinue)) {
+            throw "WiX Toolset 3.14 (candle.exe / light.exe) was not found on the runner"
+          }
+          Write-Host "Using WiX: $($candle.Source)"
+
+      - name: Build installers and portable archive
+        shell: pwsh
+        run: ./scripts/release.ps1 build -SkipVerify
+
+      - name: Generate SHA256SUMS.txt
+        shell: pwsh
+        run: ./scripts/release.ps1 checksums
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            target/release/bundle/nsis/Restic.Tray_*_x64-setup.exe
+            target/release/bundle/msi/Restic.Tray_*_x64_ja-JP.msi
+            target/release/bundle/portable/Restic.Tray_*_x64-portable.zip
+            target/release/bundle/SHA256SUMS.txt
+
+      - name: Create draft GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          $tag = $env:RELEASE_TAG
+          $ver = $tag.TrimStart('v')
+          $bundleRoot = 'target\release\bundle'
+          $assets = @(
+            (Join-Path $bundleRoot "nsis\Restic.Tray_${ver}_x64-setup.exe"),
+            (Join-Path $bundleRoot "msi\Restic.Tray_${ver}_x64_ja-JP.msi"),
+            (Join-Path $bundleRoot "portable\Restic.Tray_${ver}_x64-portable.zip"),
+            (Join-Path $bundleRoot 'SHA256SUMS.txt')
+          )
+          foreach ($asset in $assets) {
+            if (-not (Test-Path -LiteralPath $asset -PathType Leaf)) {
+              throw "Expected release artifact missing: $asset"
+            }
+          }
+
+          $notesPath = Join-Path $bundleRoot "release-notes-$tag.md"
+          $body = $null
+          if (Test-Path -LiteralPath CHANGELOG.md) {
+            $raw = Get-Content -LiteralPath CHANGELOG.md -Raw -Encoding UTF8
+            $pattern = "(?ms)^## \[$([regex]::Escape($ver))\][^\r\n]*\r?\n(?<body>.*?)(?=^## |^\[[^\]]+\]:\s|\z)"
+            $m = [regex]::Match($raw, $pattern)
+            if ($m.Success) {
+              $body = $m.Groups['body'].Value.Trim()
+            }
+          }
+
+          $verificationFooter = @"
+          ### Verification
+
+          Initial releases are unsigned. Before running, verify both the SHA-256 checksum and the GitHub Artifact Attestation:
+
+          ``````powershell
+          Get-FileHash -Algorithm SHA256 .\Restic.Tray_${ver}_x64-setup.exe
+          Get-Content .\SHA256SUMS.txt
+          gh attestation verify .\Restic.Tray_${ver}_x64-setup.exe --repo $($env:GITHUB_REPOSITORY)
+          ``````
+          "@
+
+          $releaseNotes = if ($body) {
+            "$body`n`n$verificationFooter`n"
+          } else {
+            "$verificationFooter`n"
+          }
+          Set-Content -LiteralPath $notesPath -Value $releaseNotes -Encoding UTF8 -NoNewline
+
+          $createArgs = @(
+            'release', 'create', $tag,
+            '--draft',
+            '--verify-tag',
+            '--title', "Restic Tray $tag",
+            '--notes-file', $notesPath,
+            '--generate-notes'
+          )
+
+          gh @createArgs @assets
+          if ($LASTEXITCODE -ne 0) {
+            throw "gh release create failed ($LASTEXITCODE)"
+          }

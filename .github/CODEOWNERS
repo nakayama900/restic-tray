@@ -1,0 +1,42 @@
+# Code owners for security-critical, governance, workflow, and packaging paths.
+# This file documents path ownership and notifies @nayuengin on external PRs
+# (paired with automatic `Status: Needs Human` labeling in .github/labeler.yml).
+# Because Restic Tray is operated by a solo owner (@nayuengin) with AI
+# maintainers on the same account, the `main` Ruleset requires Pull Requests
+# and passing required status checks only — GitHub review approvals and
+# Code Owner review checks are not required to merge.
+
+# GitHub Actions workflows & repository automation
+/.github/workflows/          @nayuengin
+/.github/CODEOWNERS          @nayuengin
+/.github/renovate.json       @nayuengin
+/.github/labels.yml          @nayuengin
+/.github/labeler.yml         @nayuengin
+
+# Security policy, AI maintainer charter, governance & licensing
+/SECURITY.md                 @nayuengin
+/AGENTS.md                   @nayuengin
+/CONTRIBUTING.md             @nayuengin
+/CODE_OF_CONDUCT.md          @nayuengin
+/LICENSE                     @nayuengin
+/deny.toml                   @nayuengin
+
+# Security-critical Rust modules (DPAPI, unsafe sites, path safety, MCP auth/policy, command execution)
+/src/secrets.rs              @nayuengin
+/src/fs_safety.rs            @nayuengin
+/src/window.rs               @nayuengin
+/src/config.rs               @nayuengin
+/src/controller.rs           @nayuengin
+/src/agent/bridge.rs         @nayuengin
+/src/agent/mcp.rs            @nayuengin
+/src/agent/protocol.rs       @nayuengin
+/src/restic/runner.rs        @nayuengin
+
+# Supply-chain pinning, quality gate, build configuration & release packaging
+/scripts/download-restic.ps1 @nayuengin
+/scripts/release.ps1         @nayuengin
+/scripts/verify.ps1          @nayuengin
+/build.rs                    @nayuengin
+/.cargo/config.toml          @nayuengin
+/rust-toolchain.toml         @nayuengin
+/packaging/                  @nayuengin

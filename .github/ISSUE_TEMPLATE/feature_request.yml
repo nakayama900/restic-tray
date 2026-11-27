@@ -1,0 +1,62 @@
+name: Feature Request
+description: Suggest an improvement or discuss a new capability before implementing
+title: "[Feature]: "
+labels: ["Feedback: Feature Request", "Status: Triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for sharing your idea!
+        - Restic Tray targets **Windows x64**, **Cloudflare R2**, and a **Japanese UI**. Requests outside this scope are welcome as ideas, though implementation is not guaranteed.
+        - Review and triage are best-effort (no SLA).
+        - **Privacy reminder**: Do not include real R2 Account IDs, keys, passwords, or unredacted personal paths.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Desktop GUI / Tray / Notifications (Scope: GUI)
+        - MCP Server / Named Pipe Bridge (Scope: MCP)
+        - Restic / Cloudflare R2 / Excludes / Multi-PC Sync (Scope: Restic)
+        - Scheduler / SQLite History / Config (Scope: Scheduler)
+        - Installer / Packaging (Scope: Packaging)
+        - Documentation (PR: Documentation)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: Describe the concrete workflow or limitation you are running into.
+      placeholder: I am trying to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How should this work from the user's or MCP client's perspective?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered / additional context
+      description: Any workarounds, trade-offs, or redacted screenshots/mockups (no secrets or personal paths).
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I searched existing issues to avoid duplicates.
+          required: true
+        - label: I confirmed no secrets or unredacted personal information are included above.
+          required: true

@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>導入と検証 | Restic Tray ドキュメント</title>
+  <meta name="description" content="Restic Tray v1.0.0（NSIS / MSI / Portable ZIP）のインストール、SHA256SUMS.txt 照合、GitHub Artifact Attestation 検証、Windows 自動起動の設定手順。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/installation.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/installation.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/installation.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/installation.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="導入と検証 | Restic Tray ドキュメント">
+  <meta property="og:description" content="Restic Tray v1.0.0（NSIS / MSI / Portable ZIP）のインストール、SHA256SUMS.txt 照合、GitHub Artifact Attestation 検証、Windows 自動起動の設定手順。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/installation.html">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="導入と検証 | Restic Tray ドキュメント">
+  <meta name="twitter:description" content="Restic Tray v1.0.0（NSIS / MSI / Portable ZIP）のインストール、SHA256SUMS.txt 照合、GitHub Artifact Attestation 検証、Windows 自動起動の設定手順。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"},{"@type":"ListItem","position":3,"name":"導入と検証","item":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"導入と検証","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/installation.html" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: 導入と検証</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html" aria-current="page">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html" aria-current="page">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./">ドキュメント</a></li>
+          <li aria-current="page">導入と検証</li>
+          </ol>
+        </nav>
+
+        <h1>導入と検証</h1>
+        <p class="doc-lead">Restic Tray v1.0.0 の入手、SHA-256 チェックサムとビルド来歴証明の確認、Windows サインイン時の自動起動設定を説明します。</p>
+
+        <h2 id="requirements">動作環境</h2>
+        <ul>
+          <li><strong>OS</strong>: Windows 10 / Windows Server 2016 以降（64-bit x64）。</li>
+          <li><strong>TLS</strong>: TLS 1.2 以降（同梱する公式 <code>restic.exe</code> v0.20.0 の必須要件）。</li>
+          <li><strong>保存先</strong>: Cloudflare R2 バケットと API トークン（手順は「<a href="setup.html">初期設定と Cloudflare R2</a>」を参照）。</li>
+          <li><strong>追加ランタイム</strong>: 不要。配布パッケージは純 Rust のネイティブバイナリで、WebView2 や Visual C++ 再頒布可能パッケージの導入は要りません。</li>
+        </ul>
+
+        <h2 id="download">GitHub Releases からダウンロード</h2>
+        <p><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a> から利用形態に合うパッケージを取得してください。3 形式すべてに、SHA-256 検証済みの固定バージョン公式 <code>restic.exe</code> v0.20.0 を同梱しています。</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="install-packages-ja-caption">
+  <table>
+    <caption id="install-packages-ja-caption">Restic Tray v1.0.0 Windows x64 配布形式一覧</caption>
+    <thead>
+      <tr>
+        <th scope="col">配布形式</th>
+        <th scope="col">ファイル名</th>
+        <th scope="col">インストール先・特徴</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">NSIS インストーラ（推奨）</th>
+        <td data-label="ファイル名"><code>Restic.Tray_1.0.0_x64-setup.exe</code></td>
+        <td data-label="インストール先・特徴"><code>%LOCALAPPDATA%\Programs\Restic Tray</code> へユーザー単位で導入。常駐アプリや <code>--mcp</code> が動いていても安全に上書き更新できます。</td>
+      </tr>
+      <tr>
+        <th scope="row">MSI インストーラ</th>
+        <td data-label="ファイル名"><code>Restic.Tray_1.0.0_x64_ja-JP.msi</code></td>
+        <td data-label="インストール先・特徴">Windows Installer 形式（ユーザー単位導入）。</td>
+      </tr>
+      <tr>
+        <th scope="row">Portable ZIP</th>
+        <td data-label="ファイル名"><code>Restic.Tray_1.0.0_x64-portable.zip</code></td>
+        <td data-label="インストール先・特徴">任意のフォルダに展開して <code>restic-tray.exe</code> を直接起動します（<code>restic.exe</code> を同梱）。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="verify">チェックサム照合とビルド来歴証明</h2>
+        <aside class="callout callout-warn" aria-label="初期リリースは未署名です（SmartScreen / Smart App Control）">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>初期リリースは未署名です（SmartScreen / Smart App Control）</span></div>
+  <p>初期リリースは <strong>コード署名なし</strong> で配布されます。初回実行時に Windows Defender SmartScreen の警告（「Windows によって PC が保護されました」）が表示される場合があります。必ず以下の検証を行ってから「詳細情報」&rarr;「実行」で起動してください。Windows 11 の <strong>Smart App Control</strong> が有効な環境では未署名バイナリがブロックされる場合があります。</p>
+</aside>
+        <p>同じリリースから <code>SHA256SUMS.txt</code> もダウンロードし、PowerShell で両方の検証を実行してください。</p>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="PowerShell のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="SHA-256 チェックサムと GitHub Artifact Attestation を検証するコマンド" tabindex="0"><code># 1. 同じリリースの SHA256SUMS.txt と SHA-256 ハッシュを照合する
+Get-FileHash -Algorithm SHA256 .\Restic.Tray_1.0.0_x64-setup.exe
+Get-Content .\SHA256SUMS.txt
+
+# 2. GitHub Artifact Attestation（ビルド来歴証明）を検証する（GitHub CLI `gh` が必要）
+gh attestation verify .\Restic.Tray_1.0.0_x64-setup.exe --repo nayuengin/restic-tray</code></pre>
+</div>
+        <p>公式リリース配布物はすべて GitHub ホステッドランナー（<code>.github/workflows/release.yml</code>）でビルドされ、GitHub Artifact Attestations が付与されています。</p>
+
+        <h2 id="startup">Windows サインイン時の自動起動</h2>
+        <aside class="callout callout-warn" aria-label="定期バックアップを止めないための重要設定">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>定期バックアップを止めないための重要設定</span></div>
+  <p>現時点では、アプリ側で Windows の自動起動を登録する機能はありません。<strong>定期バックアップと未実施通知はアプリが起動している間だけ動作する</strong>ため、PC 再起動後にアプリを起動しないままだとバックアップが止まります。</p>
+</aside>
+        <p>サインイン時にトレイへ格納した状態で自動起動させるには、スタートアップフォルダへショートカットを配置してください。</p>
+        <ol>
+          <li><kbd>Win</kbd> + <kbd>R</kbd> を押し、<code>shell:startup</code> と入力して <kbd>Enter</kbd> を押します。</li>
+          <li>開いたスタートアップフォルダに、<code>--minimized</code> 引数を付けたショートカットを作成します。</li>
+        </ol>
+        <div class="code-block">
+  <div class="code-header">
+    <span>ショートカットのリンク先</span>
+    <button class="copy-btn" type="button" aria-label="ショートカットのリンク先 のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="トレイ格納状態で自動起動するためのショートカットリンク先" tabindex="0"><code>&quot;%LOCALAPPDATA%\Programs\Restic Tray\restic-tray.exe&quot; --minimized</code></pre>
+</div>
+        <p>Portable ZIP 版を使っている場合は、展開した <code>restic-tray.exe</code> のパスに読み替えてください。</p>
+
+        <h2 id="updates">更新とアンインストール</h2>
+        <ul>
+          <li><strong>新リリースの通知</strong>: アプリ内に自動更新確認通信はありません。<a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">nayuengin/restic-tray</a> の上部にある <strong>Watch &rarr; Custom &rarr; Releases</strong> を有効にしてください。</li>
+          <li><strong>バージョンアップ</strong>: 新しい NSIS インストーラを検証のうえ実行すれば、常駐中・<code>--mcp</code> 稼働中でも安全に上書き更新できます。</li>
+          <li><strong>アンインストール</strong>: アプリを削除しても <code>%LOCALAPPDATA%\io.github.nayuengin.restic-tray\</code> と Cloudflare R2 上のバックアップデータは削除されません。完全に消去したい場合は手動で削除してください。</li>
+        </ul>
+
+        <h2 id="build-from-source">ソースからビルド（任意）</h2>
+        <p>前提環境（Windows x64）: Rust stable（MSRV <strong>1.95</strong>、<code>x86_64-pc-windows-msvc</code>）、Visual Studio C++ ビルドツール、PowerShell 7（<code>pwsh</code>）。インストーラも作る場合は NSIS（<code>makensis.exe</code>）、WiX Toolset 3.14（<code>candle.exe</code> / <code>light.exe</code>）、Python 3 も必要です。</p>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="PowerShell のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="Windows でソースコードから Restic Tray をビルドする手順" tabindex="0"><code>git clone https://github.com/nayuengin/restic-tray.git
+cd restic-tray
+
+# 固定バージョンの公式 restic.exe (v0.20.0) を取得し SHA-256 検証のうえ配置
+pwsh -NoProfile -File scripts/download-restic.ps1
+
+# 開発起動
+cargo run
+
+# リリースビルド (target/release/restic-tray.exe)
+cargo build --release --locked</code></pre>
+</div>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link prev" href="./">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>前へ</span>
+          <span class="pager-title">ドキュメント概要</span>
+        </a>
+        <a class="pager-link next" href="setup.html">
+          <span class="pager-dir">次へ<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">初期設定と Cloudflare R2</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#requirements">動作環境</a></li>
+          <li><a href="#download">パッケージの入手</a></li>
+          <li><a href="#verify">チェックサムと来歴証明</a></li>
+          <li><a href="#startup">サインイン時の自動起動</a></li>
+          <li><a href="#updates">更新とアンインストール</a></li>
+          <li><a href="#build-from-source">ソースからビルド</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

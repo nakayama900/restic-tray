@@ -1,0 +1,123 @@
+name: Bug Report
+description: Report a reproducible bug in Restic Tray
+title: "[Bug]: "
+labels: ["Problem: Bug", "Status: Triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting a bug!
+        - Only the **latest release** is supported, on a best-effort basis (no SLA).
+        - For security vulnerabilities, **do not** open a public issue — use [Private Vulnerability Reporting](https://github.com/nayuengin/restic-tray/security/advisories/new).
+        - **Privacy & secrets warning**: Before pasting logs, `config.json`, or MCP `get_status` / `get_config` output, **redact** your Cloudflare R2 Account ID, private bucket/prefix names, and Windows usernames/paths (e.g., replace with `<accountId>`, `<bucket>`, `C:\Users\<user>`). **Never paste R2 Access Keys, Secret Keys, repository passwords, or `agent-bridge.json` tokens.**
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Affected area
+      description: Which part of Restic Tray does this bug affect?
+      options:
+        - Desktop GUI / Tray / Notifications (Scope: GUI)
+        - MCP Server / Named Pipe Bridge (Scope: MCP)
+        - Restic / Cloudflare R2 / Secrets / Multi-PC Sync (Scope: Restic)
+        - Scheduler / SQLite History / Config (Scope: Scheduler)
+        - Installer / Portable ZIP / Build Scripts (Scope: Packaging)
+        - Other / Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Concise summary of the bug and actual behavior.
+      placeholder: Describe what went wrong...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, exact steps to trigger the issue.
+      placeholder: |
+        1. Open Restic Tray and go to ...
+        2. Click / run MCP tool ...
+        3. Observe error ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: input
+    id: app-version
+    attributes:
+      label: Restic Tray version
+      description: Run `restic-tray.exe --version` or check the sidebar footer.
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows version & architecture
+      description: Run `winver` or `cmd /c ver`.
+      placeholder: e.g. Windows 11 24H2 (Build 26100, x64)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install-method
+    attributes:
+      label: Installation method
+      options:
+        - NSIS installer (*-setup.exe)
+        - MSI installer (*.msi)
+        - Portable ZIP (*-portable.zip)
+        - Built from source (cargo)
+    validations:
+      required: true
+
+  - type: input
+    id: restic-version
+    attributes:
+      label: Restic version (if relevant)
+      description: Leave blank if using the bundled restic.exe.
+      placeholder: e.g. restic 0.20.0 (bundled)
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or redacted output
+      description: |
+        Paste relevant error messages, History details, or redacted MCP output.
+        REQUIRED BEFORE PASTING: Mask R2 Account IDs (`<accountId>`), bucket/prefix names, and Windows usernames (`C:\Users\<user>`). Never paste API keys, passwords, or `credentials.dat` / `agent-bridge.json` contents.
+      placeholder: |
+        Example (redacted):
+        repository: s3:https://<accountId>.r2.cloudflarestorage.com/<bucket>/<prefix>
+        path: C:\Users\<user>\Documents\Project
+        error: ...
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I tested on the latest release of Restic Tray.
+          required: true
+        - label: I searched existing issues to avoid duplicates.
+          required: true
+        - label: I confirmed that NO secrets (R2 keys, repository passwords, tokens), unredacted Account IDs, or personal paths are included above.
+          required: true

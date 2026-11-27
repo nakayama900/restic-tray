@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>バックアップと復元 | Restic Tray ドキュメント</title>
+  <meta name="description" content="Restic Tray のバックアップ実行・Dry-Run、GUI での全体／部分復元、PC 紛失時の新 PC 復旧、公式 restic CLI のみでの復元手順。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="バックアップと復元 | Restic Tray ドキュメント">
+  <meta property="og:description" content="Restic Tray のバックアップ実行・Dry-Run、GUI での全体／部分復元、PC 紛失時の新 PC 復旧、公式 restic CLI のみでの復元手順。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="バックアップと復元 | Restic Tray ドキュメント">
+  <meta name="twitter:description" content="Restic Tray のバックアップ実行・Dry-Run、GUI での全体／部分復元、PC 紛失時の新 PC 復旧、公式 restic CLI のみでの復元手順。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"},{"@type":"ListItem","position":3,"name":"バックアップと復元","item":"https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"バックアップと復元の手順","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/backup-restore.html" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: バックアップと復元</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html" aria-current="page">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html" aria-current="page">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./">ドキュメント</a></li>
+          <li aria-current="page">バックアップと復元</li>
+          </ol>
+        </nav>
+
+        <h1>バックアップと復元の手順</h1>
+        <p class="doc-lead">テスト実行から初回バックアップ、GUI での全体・部分復元、新しい PC での復旧、公式 restic CLI 単体での復元手順をまとめています。</p>
+
+        <p>Restic Tray はフォルダごとに暗号化スナップショットを作成し、復元時に元のフォルダを直接上書きしません。保存先は標準 restic リポジトリ形式のため、GUI・MCP・新 PC・公式 <code>restic</code> CLI 単体のいずれからでも復元できます。</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="restore-modes-ja-caption">
+  <table>
+    <caption id="restore-modes-ja-caption">復元手段と安全ガード・展開先一覧</caption>
+    <thead>
+      <tr>
+        <th scope="col">復元手段</th>
+        <th scope="col">必要なもの</th>
+        <th scope="col">安全ガードと出力先</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>GUI 復元</strong>（スナップショット画面）</th>
+        <td data-label="必要なもの">R2 認証情報を設定済みの Restic Tray</td>
+        <td data-label="安全ガードと出力先"><code>fs_safety</code> で検証された別フォルダへ展開。ドライブ直下（<code>C:\</code>）・<code>..</code>・システム領域を拒否。全体／カンマ区切り部分復元に対応。</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>MCP 復元</strong>（<code>restore_snapshot</code>）</th>
+        <td data-label="必要なもの">MCP クライアント + <code>agent.allowRestore: true</code>（既定）</td>
+        <td data-label="安全ガードと出力先">検証済み <code>targetDir</code> へ全体または <code>includePaths</code> 指定復元。空配列 <code>includePaths: []</code> は拒否。</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>新しい PC での復旧</strong></th>
+        <td data-label="必要なもの">新規 Restic Tray + R2 トークン + 元のリポジトリパスワード</td>
+        <td data-label="安全ガードと出力先">同一のアカウント ID・バケット・プレフィックス・パスワードを再入力し、<strong>接続を確認</strong>後に復元。</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>公式 <code>restic</code> CLI 復元</strong>（アプリなし）</th>
+        <td data-label="必要なもの">公式 <code>restic.exe</code> + R2 キー + リポジトリパスワード</td>
+        <td data-label="安全ガードと出力先">標準 restic 形式でロックインなし。<code>&lt;復元先&gt;\&lt;ドライブ文字&gt;\&lt;元のパス&gt;</code> 配下に展開。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="backup-workflow">最初のバックアップ手順（テスト実行 &rarr; 本番）</h2>
+        <ol>
+          <li><strong>フォルダ</strong>画面で対象フォルダと <strong>基本の除外パターンを有効にする</strong> の状態を確認します。</li>
+          <li><strong>概要</strong>画面に戻り、まず <strong>テスト実行</strong>（Dry-Run）を押します。データをアップロードせずに <code>restic backup --dry-run</code> が走り、ファイル件数やキャッシュが正しく除外されているか確かめられます。</li>
+          <li>問題がなければ <strong>今すぐバックアップ</strong> を実行します。有効なフォルダごとに 1 件ずつ暗号化スナップショットが作成されます（1 対象 = 1 スナップショット）。</li>
+          <li>完了後、<strong>設定 &rarr; スケジュール</strong> で自動バックアップを有効にし、<a href="installation.html#startup">Windows サインイン時の自動起動</a>も済ませておくと安心です。</li>
+        </ol>
+
+        <h2 id="gui-restore">アプリの画面から復元する</h2>
+        <figure>
+          <picture>
+  <source srcset="../../assets/screenshots/snapshots.webp" type="image/webp">
+  <img src="../../assets/screenshots/snapshots.png" alt="Restic Tray のスナップショット画面。ファイル一覧、差分比較、安全な復元先指定パネルを表示" width="1240" height="820" loading="lazy">
+</picture>
+          <figcaption>スナップショット画面。中身確認・差分比較のうえ、元の場所とは別の安全なフォルダへ復元します。</figcaption>
+        </figure>
+        <ol>
+          <li>左メニューの <strong>スナップショット</strong> を開き、<strong>R2 から読み込む</strong>（または <strong>再読み込み</strong>）を押して一覧を取得します。</li>
+          <li>左の一覧から復元したいスナップショットを選びます。必要に応じて <strong>ファイル一覧を表示</strong> や <strong>差分を表示</strong> で中身を確認できます。</li>
+          <li><strong>復元</strong>セクションの <strong>復元先フォルダ</strong> に、<strong>元の場所とは別の安全なフォルダ</strong>（例: <code>D:\Restore\2026-11-26</code>）を指定します。<code>fs_safety</code> により、ドライブ直下（<code>C:\</code>）、<code>..</code> トラバーサル、未解決リパースポイント、<code>C:\Windows</code>・<code>C:\Program Files</code> などのシステム領域は自動的に拒否されます。</li>
+          <li><strong>一部だけ復元したい場合</strong>: <strong>一部だけ復元する（任意）</strong> にスナップショット内のパス（例: <code>/D/Projects/SampleWorld/notes</code>）をカンマ区切りで入力します（空欄なら全体復元）。MCP からは <code>restore_snapshot</code> の <code>includePaths</code> で同じ操作ができます。</li>
+          <li><strong>復元する</strong> を押し、確認ダイアログで確定します。</li>
+        </ol>
+        <aside class="callout" aria-label="復元後のフォルダ階層について">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>復元後のフォルダ階層について</span></div>
+  <p>復元先フォルダの下には、元のドライブ文字を含む階層構造でファイルが展開されます（例: <code>D:\Projects\SampleWorld</code> のスナップショットを <code>D:\Restore\2026-11-26</code> へ復元すると <code>D:\Restore\2026-11-26\D\Projects\SampleWorld\...</code> に配置されます）。元のフォルダを直接上書きすることはありません。</p>
+</aside>
+
+        <h2 id="disaster-recovery">新しい PC で復旧する（PC 紛失・故障時）</h2>
+        <p>PC の故障・紛失や Windows 再インストール後に別の PC から復旧する手順です。</p>
+        <ol>
+          <li>新しい PC に Restic Tray をインストールします。</li>
+          <li><strong>設定 &rarr; 保存先</strong> に、元の PC と同じ Cloudflare R2 の <strong>アカウント ID</strong>・<strong>バケット</strong>・<strong>バケット内のフォルダ</strong> を入力して <strong>保存</strong> します。</li>
+          <li><strong>設定 &rarr; 認証情報</strong> に、有効な R2 API トークン（Cloudflare ダッシュボードで新しく発行したもので構いません）と、<strong>別の場所に控えておいた元のリポジトリのパスワード</strong> を入力して <strong>認証情報を保存</strong> します。</li>
+          <li><strong>接続を確認</strong> でリポジトリへアクセスできることと整合性を確かめます。</li>
+          <li><strong>スナップショット</strong>画面から必要なスナップショットを選び、別の復元先フォルダへ取り出します。</li>
+        </ol>
+
+        <h2 id="cli-recovery">Restic Tray なしで復元する（公式 <code>restic</code> CLI）</h2>
+        <p>保存先は標準の restic リポジトリのため、Restic Tray がなくても公式の <code>restic</code> コマンドだけで一覧確認と復元ができます。</p>
+        <ol>
+          <li><a href="https://github.com/restic/restic/releases" rel="noopener noreferrer">restic/restic Releases</a> から Windows 版の公式 <code>restic.exe</code> を入手します。</li>
+          <li>PowerShell で、現在のセッションの環境変数に R2 の接続先とアクセスキーを設定します。</li>
+        </ol>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="PowerShell のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="公式 restic CLI で Cloudflare R2 へ接続するための環境変数設定" tabindex="0"><code>$env:AWS_ACCESS_KEY_ID = &quot;&lt;R2 のアクセスキー ID&gt;&quot;
+$env:AWS_SECRET_ACCESS_KEY = &quot;&lt;R2 のシークレットアクセスキー&gt;&quot;
+$env:AWS_DEFAULT_REGION = &quot;auto&quot;
+$env:RESTIC_REPOSITORY = &quot;s3:https://&lt;アカウント ID&gt;.r2.cloudflarestorage.com/&lt;バケット名&gt;/&lt;プレフィックス&gt;&quot;
+# プレフィックスを使っていない場合は末尾の /&lt;プレフィックス&gt; を省きます。</code></pre>
+</div>
+        <aside class="callout" aria-label="パスワードは PowerShell の履歴に残さない">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>パスワードは PowerShell の履歴に残さない</span></div>
+  <p>リポジトリのパスワードは <code>$env:RESTIC_PASSWORD</code> に書かず、<code>restic</code> 実行時の対話プロンプトから入力するとコマンド履歴に残りません。</p>
+</aside>
+        <ol start="3">
+          <li>スナップショット一覧を確認し、別のフォルダへ復元します。</li>
+        </ol>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="PowerShell のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="公式 restic.exe でスナップショット一覧表示と復元を実行するコマンド" tabindex="0"><code>.\restic.exe snapshots
+.\restic.exe restore &lt;スナップショット ID&gt; --target D:\Restore</code></pre>
+</div>
+        <p>復元されたファイルは <code>D:\Restore\&lt;ドライブ文字&gt;\&lt;元のパス&gt;\...</code> 配下に展開されます。手動でデータ整合性を確かめる場合は <code>.\restic.exe check --read-data-subset=5%</code> を実行します。</p>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link prev" href="mcp.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>前へ</span>
+          <span class="pager-title">MCP 統合</span>
+        </a>
+        <a class="pager-link next" href="troubleshooting.html">
+          <span class="pager-dir">次へ<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">トラブルシューティング</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#backup-workflow">テスト実行とバックアップ</a></li>
+          <li><a href="#gui-restore">アプリの画面から復元</a></li>
+          <li><a href="#disaster-recovery">新しい PC で復旧</a></li>
+          <li><a href="#cli-recovery">Restic Tray なしで復元</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

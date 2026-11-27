@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>トラブルシューティング | Restic Tray ドキュメント</title>
+  <meta name="description" content="Restic Tray のトラブルシューティング：SmartScreen、自動起動、DPAPI エラー、Cloudflare R2 403、ロック延期、Unity 除外、MCP オプトイン拒否の対処法。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/troubleshooting.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/troubleshooting.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="トラブルシューティング | Restic Tray ドキュメント">
+  <meta property="og:description" content="Restic Tray のトラブルシューティング：SmartScreen、自動起動、DPAPI エラー、Cloudflare R2 403、ロック延期、Unity 除外、MCP オプトイン拒否の対処法。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="トラブルシューティング | Restic Tray ドキュメント">
+  <meta name="twitter:description" content="Restic Tray のトラブルシューティング：SmartScreen、自動起動、DPAPI エラー、Cloudflare R2 403、ロック延期、Unity 除外、MCP オプトイン拒否の対処法。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"},{"@type":"ListItem","position":3,"name":"トラブルシューティング","item":"https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"トラブルシューティング","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/troubleshooting.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/troubleshooting.html" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: トラブルシューティング</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html" aria-current="page">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html" aria-current="page">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./">ドキュメント</a></li>
+          <li aria-current="page">トラブルシューティング</li>
+          </ol>
+        </nav>
+
+        <h1>トラブルシューティング</h1>
+        <p class="doc-lead">SmartScreen 警告、再起動後の停止、DPAPI 復号エラー、R2 権限エラー、ロック延期、除外一致、MCP 拒否などの原因と解決方法です。</p>
+
+        <p>よくある症状と原因・対処の早見表です。各見出しで詳細手順を確認できます。</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="troubleshoot-quick-ja-caption">
+  <table>
+    <caption id="troubleshoot-quick-ja-caption">症状別の原因と対処早見表</caption>
+    <thead>
+      <tr>
+        <th scope="col">症状</th>
+        <th scope="col">原因</th>
+        <th scope="col">すぐ試す対処</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">SmartScreen / Smart App Control 警告</th>
+        <td data-label="原因">初期リリース（v1.0.0）はコード署名なし</td>
+        <td data-label="すぐ試す対処"><code>SHA256SUMS.txt</code> と <code>gh attestation verify</code> を確認後、「詳細情報 &rarr; 実行」（またはソースビルド）。</td>
+      </tr>
+      <tr>
+        <th scope="row">Windows 再起動後に自動バックアップが止まる</th>
+        <td data-label="原因">自動起動の自動登録は未実装</td>
+        <td data-label="すぐ試す対処"><code>shell:startup</code> に <code>restic-tray.exe --minimized</code> のショートカットを配置。</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>credentials.dat</code> の復号エラー</th>
+        <td data-label="原因">DPAPI が元の PC・Windows ユーザーに紐づく</td>
+        <td data-label="すぐ試す対処">設定 &rarr; 認証情報で R2 キーと元のリポジトリパスワードを再入力して保存。</td>
+      </tr>
+      <tr>
+        <th scope="row">バケット全体削除で <code>403 AccessDenied</code></th>
+        <td data-label="原因">バケット限定 <code>Object Read &amp; Write</code> に <code>DeleteBucket</code> 権限がない</td>
+        <td data-label="すぐ試す対処">オブジェクトは空化済み。Cloudflare ダッシュボードから空バケットを削除。</td>
+      </tr>
+      <tr>
+        <th scope="row">除外パターン一致でバックアップ中止</th>
+        <td data-label="原因">基本または独自除外が対象フォルダ自体に一致</td>
+        <td data-label="すぐ試す対処">親フォルダ名や除外設定を見直すか、<code>useBasicExcludes</code> をオフ。</td>
+      </tr>
+      <tr>
+        <th scope="row">履歴に <code>deferred</code>（延期）が出る</th>
+        <td data-label="原因">別プロセス／他 PC がリポジトリロック保持（終了コード 11）</td>
+        <td data-label="すぐ試す対処">15 分後の自動再試行（最大 2 回）を待つか、他 PC 停止確認後に安全なロック解除。</td>
+      </tr>
+      <tr>
+        <th scope="row">MCP 破壊的操作が拒否される</th>
+        <td data-label="原因">オプトイン無効（<code>false</code>）または確認引数不足</td>
+        <td data-label="すぐ試す対処"><code>allowPrune</code> / <code>allowDeleteStorage</code> / <code>allowHandoff</code> を有効化し <code>dryRun: false</code> と確認値を明示。</td>
+      </tr>
+      <tr>
+        <th scope="row">Google Drive 廃止エラーで起動停止</th>
+        <td data-label="原因">旧 <code>config.json</code> に <code>"storageBackend": "googleDrive"</code> が残存</td>
+        <td data-label="すぐ試す対処">該当行を削除して Cloudflare R2 を設定し再起動。</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="smartscreen">インストーラ実行時に SmartScreen / Smart App Control の警告が出る</h2>
+        <p><strong>原因</strong>: 初期リリース（v1.0.0）はコード署名なしで配布しているためです。</p>
+        <ul>
+          <li>まず「<a href="installation.html#verify">チェックサム照合とビルド来歴証明</a>」の手順で <code>SHA256SUMS.txt</code> と <code>gh attestation verify</code> を確認してください。</li>
+          <li>SmartScreen の警告画面（「Windows によって PC が保護されました」）では <strong>詳細情報</strong> &rarr; <strong>実行</strong> を選びます。</li>
+          <li>Windows 11 の <strong>Smart App Control</strong> が強制有効な環境では未署名バイナリがブロックされます。その場合は「<a href="installation.html#build-from-source">ソースからビルド</a>」をご検討ください。</li>
+        </ul>
+
+        <h2 id="paused-after-reboot">PC を再起動してから自動バックアップが動いていない</h2>
+        <p><strong>原因</strong>: 現時点では Windows の自動起動をアプリ側で自動登録していません。定期バックアップと未実施通知はアプリが起動している間だけ動作します。</p>
+        <p><strong>対処</strong>: <kbd>Win</kbd>+<kbd>R</kbd> で <code>shell:startup</code> を開き、<code>"%LOCALAPPDATA%\Programs\Restic Tray\restic-tray.exe" --minimized</code> へのショートカットを作成してください。</p>
+
+        <h2 id="dpapi">認証情報の復号エラーが出る（<code>credentials.dat</code>）</h2>
+        <p><strong>原因</strong>: <code>config\credentials.dat</code> は Windows DPAPI でその PC のその Windows ユーザーに紐づけて暗号化されています。別 PC へコピーした場合や Windows 再インストール後、ファイル破損時は復号できず、Restic Tray は元ファイルを誤って上書きしないよう明確なエラーで停止します。</p>
+        <p><strong>対処</strong>: <strong>設定 &rarr; 認証情報</strong> で R2 のアクセスキー ID・シークレットアクセスキー・元のリポジトリパスワードを再入力して <strong>認証情報を保存</strong> してください。破損した <code>credentials.dat</code> が残って部分保存できない場合は、<code>%LOCALAPPDATA%\io.github.nayuengin.restic-tray\config\credentials.dat</code> を退避・削除してから 3 項目すべてを保存し直します。</p>
+
+        <h2 id="r2-errors">Cloudflare R2 接続エラーや <code>403 AccessDenied</code></h2>
+        <ul>
+          <li><strong>アカウント ID とバケット名の確認</strong>: 32 文字のアカウント ID に空白やスラッシュが混ざっていないか、バケット名が小文字で正確に一致しているかを <strong>設定 &rarr; 保存先</strong> のプレビュー URL（<code>s3:https://&lt;accountId&gt;.r2.cloudflarestorage.com/&lt;bucket&gt;[/&lt;prefix&gt;]</code>）で確認してください。</li>
+          <li><strong>トークンの権限・期限切れ</strong>: Cloudflare ダッシュボードの <strong>Manage R2 API Tokens</strong> で、対象バケットに <strong>Object Read &amp; Write</strong> 権限があることと有効期限（TTL）が切れていないことを確かめます。</li>
+          <li><strong>バケット全体削除での <code>403 AccessDenied</code></strong>: バケット限定の <code>Object Read &amp; Write</code> トークンでは、全オブジェクト削除と未完了マルチパート中止まで成功し、最後の <code>DeleteBucket</code> だけ 403 になります。空化済みの案内が出たあと、Cloudflare ダッシュボードから空のバケットを削除してください。</li>
+        </ul>
+
+        <h2 id="exclude-match">除外パターンが対象フォルダ自体に一致してバックアップが中止される</h2>
+        <p><strong>原因</strong>: <code>D:\target\my-project</code> のように、基本除外（<code>target/</code> 等）や独自除外パターンが対象フォルダ自身のパスを含む場合、中身がゼロ件になるのを防ぐため実行前に中止します。</p>
+        <p><strong>対処</strong>: 親フォルダ名や独自除外パターンを見直すか、<strong>フォルダ</strong>画面で <strong>基本の除外パターンを有効にする</strong> をオフにしてください。</p>
+
+        <h2 id="locks-and-deferred">履歴に <code>deferred</code>（延期）と出る／リポジトリロック中</h2>
+        <p><strong>原因</strong>: 別プロセスや他の PC がリポジトリの排他ロックを保持しています（<code>--retry-lock</code> での終了コード 11）。</p>
+        <ul>
+          <li>定期バックアップは自動的に <code>deferred</code> として記録され、15 分後に最大 2 回まで再試行されます。</li>
+          <li>強制終了などで古いロックが残った場合は、他 PC で Prune や検査が動いていないことを確認したうえで、アプリ側の安全なロック解除（または公式 CLI の <code>restic unlock</code>）を実行してください。</li>
+        </ul>
+
+        <h2 id="unity-lock">Unity の除外や複数 PC 引き継ぎでの警告</h2>
+        <ul>
+          <li><strong><code>Library/</code> が入っていない</strong>: <code>useBasicExcludes</code> が有効な場合の正常動作です。生成キャッシュも送りたい場合だけ <strong>フォルダ</strong> 画面でオフにしてください。</li>
+          <li><strong><code>Temp\UnityLockfile</code> や <code>.git</code> で引き継ぎが止まる</strong>: 共有プロジェクトを引き渡す・引き継ぐ前に Unity エディタを閉じてください。<code>.git</code> を含むフォルダは複数 PC 引き継ぎ（<code>projectKey</code>）の対象外のため、Git で同期してください。</li>
+        </ul>
+
+        <h2 id="mcp-troubleshoot">MCP のツール呼び出しが拒否される／繋がらない</h2>
+        <ul>
+          <li><strong>破壊的操作が拒否される</strong>: <code>forget_prune</code>、<code>update_retention_policy</code>、<code>autoPruneAfterBackup</code>、<code>delete_r2_bucket</code>、<code>takeover_project</code> は既定で無効です。必要な項目だけ <code>config.json</code> または設定画面でオプトインを有効にし（<code>agent.allowPrune</code> / <code>allowDeleteStorage</code> / <code>allowHandoff</code>）、<code>dryRun: false</code> と確認パラメータを明示してください。</li>
+          <li><strong>空配列エラー</strong>: 全体を対象にしたい場合は <code>includePaths</code>・<code>targetIds</code>・<code>projectKeys</code> を省略してください。<code>[]</code> を渡すと範囲誤拡大防止のためエラーになります。</li>
+          <li><strong>接続できない</strong>: 常駐アプリが閉じていてもヘッドレスで動くため、MCP クライアント設定の <code>restic-tray.exe</code> のパスが実在する実行ファイルと一致しているか確認してください。</li>
+        </ul>
+
+        <h2 id="google-drive-error">起動時に Google Drive 廃止エラーが表示される</h2>
+        <p><strong>原因</strong>: v0.4&ndash;v0.7 時代の <code>config.json</code> に <code>"storageBackend": "googleDrive"</code> が残っている場合、意図しない保存先へ勝手に切り替わらないよう起動を停止します。</p>
+        <p><strong>対処</strong>: <code>%LOCALAPPDATA%\io.github.nayuengin.restic-tray\config.json</code> から <code>"storageBackend": "googleDrive"</code> の行を削除し、Cloudflare R2 の設定を確認して再起動してください。既存の Google Drive 上のデータは標準の restic リポジトリのため、<code>restic</code> と <code>rclone</code> で直接取り出せます。</p>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link prev" href="backup-restore.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>前へ</span>
+          <span class="pager-title">バックアップと復元</span>
+        </a>
+        <a class="pager-link next" href="faq.html">
+          <span class="pager-dir">次へ<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">よくある質問・サポート方針</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#smartscreen">SmartScreen / Smart App Control</a></li>
+          <li><a href="#paused-after-reboot">再起動後に止まる</a></li>
+          <li><a href="#dpapi">DPAPI 認証情報エラー</a></li>
+          <li><a href="#r2-errors">R2 接続・403 エラー</a></li>
+          <li><a href="#exclude-match">除外パターン一致で中止</a></li>
+          <li><a href="#locks-and-deferred">ロックと deferred 延期</a></li>
+          <li><a href="#unity-lock">Unity・複数 PC 引き継ぎ</a></li>
+          <li><a href="#mcp-troubleshoot">MCP 拒否・未接続</a></li>
+          <li><a href="#google-drive-error">Google Drive 廃止エラー</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

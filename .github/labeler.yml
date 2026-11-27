@@ -1,0 +1,109 @@
+# Automatic PR labeling rules for actions/labeler v7
+# All label names here must match .github/labels.yml.
+
+"Scope: GUI":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/app.rs"
+          - "src/app/**"
+          - "src/theme.rs"
+          - "src/theme/**"
+          - "src/tray.rs"
+          - "src/window.rs"
+          - "src/notify.rs"
+
+"Scope: MCP":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/agent/**"
+          - "docs/AGENT.md"
+
+"Scope: Restic":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/restic/**"
+          - "src/r2_s3.rs"
+          - "src/secrets.rs"
+          - "src/fs_safety.rs"
+          - "src/sync.rs"
+          - "scripts/download-restic.ps1"
+
+"Scope: Scheduler":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/scheduler.rs"
+          - "src/controller.rs"
+          - "src/db.rs"
+          - "src/config.rs"
+          - "src/instance.rs"
+
+"Scope: Packaging":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "packaging/**"
+          - "scripts/release.ps1"
+          - "scripts/installer-smoke.ps1"
+          - "scripts/sandbox-smoke.ps1"
+          - "scripts/generate-icon.py"
+          - "scripts/generate-third-party-notices.py"
+          - "build.rs"
+          - "assets/**"
+
+"PR: Documentation":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "**/*.md"
+          - "docs/**"
+
+"PR: CI/Build":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "scripts/verify.ps1"
+          - "Cargo.toml"
+          - "Cargo.lock"
+          - "deny.toml"
+          - "rust-toolchain.toml"
+          - ".cargo/**"
+
+"Problem: Security":
+  - changed-files:
+      - any-glob-to-any-file:
+          - "SECURITY.md"
+          - "src/secrets.rs"
+          - "src/fs_safety.rs"
+          - "src/agent/bridge.rs"
+          - "deny.toml"
+          - ".github/CODEOWNERS"
+          - ".github/workflows/security.yml"
+
+"Status: Needs Human":
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".github/CODEOWNERS"
+          - ".github/renovate.json"
+          - ".github/labels.yml"
+          - ".github/labeler.yml"
+          - "SECURITY.md"
+          - "AGENTS.md"
+          - "CONTRIBUTING.md"
+          - "CODE_OF_CONDUCT.md"
+          - "LICENSE"
+          - "deny.toml"
+          - "src/secrets.rs"
+          - "src/fs_safety.rs"
+          - "src/window.rs"
+          - "src/config.rs"
+          - "src/controller.rs"
+          - "src/agent/bridge.rs"
+          - "src/agent/mcp.rs"
+          - "src/agent/protocol.rs"
+          - "src/restic/runner.rs"
+          - "scripts/download-restic.ps1"
+          - "scripts/release.ps1"
+          - "scripts/verify.ps1"
+          - "build.rs"
+          - ".cargo/config.toml"
+          - "rust-toolchain.toml"
+          - "packaging/**"

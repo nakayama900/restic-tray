@@ -1,0 +1,61 @@
+name: Question / Usage Help
+description: Ask a question about configuring, running, or integrating Restic Tray
+title: "[Question]: "
+labels: ["Feedback: Question", "Status: Triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before asking, please check [`README.md`](https://github.com/nayuengin/restic-tray/blob/main/README.md), [`docs/ARCHITECTURE.md`](https://github.com/nayuengin/restic-tray/blob/main/docs/ARCHITECTURE.md), and [`docs/AGENT.md`](https://github.com/nayuengin/restic-tray/blob/main/docs/AGENT.md).
+        - Support is best-effort (no SLA).
+        - **Privacy & secrets warning**: Redact R2 Account IDs, private bucket/prefix names, and Windows usernames/paths before pasting any config or logs. Never paste R2 keys, repository passwords, or `agent-bridge.json` tokens.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Topic / Area
+      options:
+        - Setup / Cloudflare R2 Configuration (Scope: Restic)
+        - Desktop GUI / Tray / Notifications (Scope: GUI)
+        - MCP Integration (--mcp) (Scope: MCP)
+        - Scheduling / Retention / History (Scope: Scheduler)
+        - Installation / Updates / Verification (Scope: Packaging)
+        - Contributing / Architecture (PR: Documentation)
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+      description: Describe what you are trying to do and what is unclear.
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: Environment (Restic Tray & Windows version)
+      placeholder: e.g. Restic Tray 1.0.0 / Windows 11 24H2 (x64)
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Relevant redacted config or output (optional)
+      description: Mask Account IDs (`<accountId>`), bucket names, and local usernames (`C:\Users\<user>`). Never paste credentials or passwords.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission checklist
+      options:
+        - label: I checked README / docs and searched existing issues first.
+          required: true
+        - label: I confirmed no secrets, R2 Account IDs, or personal paths are included above.
+          required: true

@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>Initial Setup &amp; Cloudflare R2 | Restic Tray Docs</title>
+  <meta name="description" content="Step-by-step Cloudflare R2 setup for Restic Tray: bucket creation, least-privilege Object Read &amp; Write API token, DPAPI credential storage, repository init, and token rotation.">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/setup.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="Initial Setup &amp; Cloudflare R2 | Restic Tray Docs">
+  <meta property="og:description" content="Step-by-step Cloudflare R2 setup for Restic Tray: bucket creation, least-privilege Object Read &amp; Write API token, DPAPI credential storage, repository init, and token rotation.">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/docs/setup.html">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Initial Setup &amp; Cloudflare R2 | Restic Tray Docs">
+  <meta name="twitter:description" content="Step-by-step Cloudflare R2 setup for Restic Tray: bucket creation, least-privilege Object Read &amp; Write API token, DPAPI credential storage, repository init, and token rotation.">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.","url":"https://nayuengin.github.io/restic-tray/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Client-side encrypted Restic backups (AES-256-CTR + Poly1305-AES) to Cloudflare R2","Windows DPAPI + secondary entropy + Zeroize credential isolation (credentials.dat)","Single-binary built-in 22-tool MCP server (--mcp) with Named Pipe mutual authentication","Built-in cache and Unity project-root excludes plus excludeIfPresent marker support","Automated periodic restore checks (5% every 7 days) and Windows overdue toast alerts (48h default)","Standard restic repository format recoverable anytime with the standalone restic CLI"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://nayuengin.github.io/restic-tray/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://nayuengin.github.io/restic-tray/docs/"},{"@type":"ListItem","position":3,"name":"Initial Setup & Cloudflare R2","item":"https://nayuengin.github.io/restic-tray/docs/setup.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Initial Setup & Cloudflare R2","inLanguage":"en","url":"https://nayuengin.github.io/restic-tray/docs/setup.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">Home</a></li>
+          <li><a href="./" aria-current="page">Docs</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">Download</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../ja/docs/setup.html" hreflang="ja" lang="ja">日本語</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">Switch to dark theme</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">Switch to light theme</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>Documentation menu: Initial Setup &amp; Cloudflare R2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="Documentation menu">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html" aria-current="page">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="Documentation">
+        <p class="docs-nav-heading">Documentation</p>
+        <nav aria-label="Documentation">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html" aria-current="page">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li aria-current="page">Initial Setup &amp; Cloudflare R2</li>
+          </ol>
+        </nav>
+
+        <h1>Initial Setup &amp; Cloudflare R2</h1>
+        <p class="doc-lead">Create a dedicated Cloudflare R2 bucket and least-privilege API token, store DPAPI-encrypted credentials in Restic Tray, and initialize your repository.</p>
+
+        <p>Restic Tray stores encrypted backups directly in your own <strong>Cloudflare R2</strong> bucket via Restic&rsquo;s native <code>s3:</code> backend. Follow these steps to create a dedicated bucket, issue a least-privilege API token, and initialize your repository.</p>
+
+        <aside class="callout" aria-label="Cloudflare billing &amp; documentation">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Cloudflare billing &amp; documentation</span></div>
+  <p>Cloudflare requires adding a payment method to enable R2 even when staying within the free tier. R2 charges zero egress (download) fees, which makes restores and periodic read-back checks predictable. Check <a href="https://developers.cloudflare.com/r2/pricing/" rel="noopener noreferrer">Cloudflare R2 Pricing</a> and the <a href="https://developers.cloudflare.com/r2/api/tokens/" rel="noopener noreferrer">R2 API Tokens guide</a> for current terms and UI labels.</p>
+</aside>
+
+        <h2 id="create-bucket">1. Create a Dedicated R2 Bucket</h2>
+        <ol>
+          <li>Sign in to the Cloudflare Dashboard (<code>https://dash.cloudflare.com/</code>) and open <strong>R2 Object Storage</strong> in the left sidebar.</li>
+          <li>Open <strong>Overview &rarr; Create bucket</strong>.</li>
+          <li>Enter a <strong>Bucket name</strong> (3&ndash;63 characters, lowercase letters <code>a-z</code>, digits <code>0-9</code>, and hyphens <code>-</code>; no leading or trailing hyphen &mdash; for example <code>my-restic-backups</code>).</li>
+          <li>Confirm <strong>Location</strong> (default Automatic or a nearby Location Hint) and <strong>Default Storage Class</strong> (normally <strong>Standard</strong>), then click <strong>Create bucket</strong>.</li>
+        </ol>
+
+        <h2 id="account-id">2. Find Your 32-Character Account ID</h2>
+        <p>Restic Tray automatically builds the S3-compatible endpoint URL <code>https://&lt;ACCOUNT_ID&gt;.r2.cloudflarestorage.com</code> from your Account ID. Locate the 32-character hexadecimal <strong>Account ID</strong> either:</p>
+        <ul>
+          <li>In the right-hand <strong>Account Details</strong> panel on the R2 <strong>Overview</strong> page, or</li>
+          <li>From the dashboard URL: <code>https://dash.cloudflare.com/&lt;ACCOUNT_ID&gt;/r2/...</code>.</li>
+        </ul>
+
+        <h2 id="api-token">3. Issue a Least-Privilege R2 API Token</h2>
+        <ol>
+          <li>On the R2 <strong>Overview</strong> page, click <strong>Manage</strong> (or <strong>Manage R2 API Tokens</strong>) next to <strong>API Tokens</strong> under <strong>Account Details</strong>.</li>
+          <li>Select <strong>Account API tokens</strong> (recommended for long-term use because it is not tied to an individual user profile) and click <strong>Create Account API token</strong>.</li>
+          <li>Set a descriptive <strong>Token name</strong> (for example <code>restic-tray-main-pc</code>). Issuing one token per PC lets you revoke a single machine&rsquo;s access if it is ever lost.</li>
+          <li>Choose permissions according to the table below:</li>
+        </ol>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="r2-perms-caption">
+  <table>
+    <caption id="r2-perms-caption">Cloudflare R2 API token permission options</caption>
+    <thead>
+      <tr>
+        <th scope="col">Permission</th>
+        <th scope="col">Bucket Scoping</th>
+        <th scope="col">Capabilities</th>
+        <th scope="col">Recommendation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>Object Read &amp; Write</strong></th>
+        <td data-label="Bucket Scoping">Supported (<strong>Specify bucket(s)</strong>)</td>
+        <td data-label="Capabilities">Backup, snapshot list, restore, integrity check, <code>forget --prune</code>, prefix delete, and emptying all objects in the bucket.</td>
+        <td data-label="Recommendation"><strong>Recommended (least privilege).</strong> Deleting the bucket container itself returns <code>403 AccessDenied</code>; empty it in Restic Tray and delete the empty bucket in Cloudflare Dashboard.</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>Admin Read &amp; Write</strong></th>
+        <td data-label="Bucket Scoping">Not available (all R2 buckets in account)</td>
+        <td data-label="Capabilities">All of the above plus deleting the bucket container directly from Restic Tray.</td>
+        <td data-label="Recommendation">Only if you specifically need in-app bucket deletion. Avoid for routine daily backups.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+        <ol start="5">
+          <li>Under <strong>Specify bucket(s)</strong>, choose <strong>Apply to specific buckets only</strong> and select only your dedicated backup bucket.</li>
+          <li>Set <strong>TTL</strong> to <strong>Forever</strong> or your preferred rotation interval (if you set an expiry, rotate the token in Restic Tray before it expires).</li>
+          <li>Click <strong>Create Account API Token</strong> and immediately record both the <strong>Access Key ID</strong> and <strong>Secret Access Key</strong>.</li>
+        </ol>
+        <aside class="callout callout-warn" aria-label="Shown only once">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Shown only once</span></div>
+  <p>Cloudflare displays the <strong>Access Key ID</strong> and <strong>Secret Access Key</strong> only once immediately after creation. If you close the page without saving them, create a new token and revoke the unused one.</p>
+</aside>
+
+        <h2 id="configure-app">4. Configure Restic Tray &amp; Initialize the Repository</h2>
+        <figure>
+          <picture>
+  <source srcset="../assets/screenshots/settings.webp" type="image/webp">
+  <img src="../assets/screenshots/settings.png" alt="Restic Tray Settings screen showing Storage (保存先) and DPAPI Credentials (認証情報) sections" width="1240" height="820" loading="lazy">
+</picture>
+          <figcaption>Settings (<code>設定</code>) screen showing the Storage fields and Windows DPAPI credential inputs (demo values).</figcaption>
+        </figure>
+        <ol>
+          <li>Launch <strong>Restic Tray</strong> and open <strong>設定</strong> (Settings) in the left sidebar.</li>
+          <li>Fill in the fields using the mapping table below:</li>
+        </ol>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="r2-mapping-caption">
+  <table>
+    <caption id="r2-mapping-caption">Mapping Cloudflare R2 values to Restic Tray Settings</caption>
+    <thead>
+      <tr>
+        <th scope="col">Cloudflare Value</th>
+        <th scope="col">Restic Tray Field (設定 / Settings)</th>
+        <th scope="col">Storage Location</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>Account ID</strong> (32-char hex)</th>
+        <td data-label="Restic Tray Field (設定 / Settings)">保存先 (Storage) &rarr; <strong>アカウント ID</strong></td>
+        <td data-label="Storage Location"><code>config.json</code> (plain text, non-secret)</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>Bucket name</strong></th>
+        <td data-label="Restic Tray Field (設定 / Settings)">保存先 (Storage) &rarr; <strong>バケット</strong></td>
+        <td data-label="Storage Location"><code>config.json</code> (plain text, non-secret)</td>
+      </tr>
+      <tr>
+        <th scope="row">Optional prefix (e.g. <code>workstation</code>; blank = bucket root)</th>
+        <td data-label="Restic Tray Field (設定 / Settings)">保存先 (Storage) &rarr; <strong>バケット内のフォルダ</strong></td>
+        <td data-label="Storage Location"><code>config.json</code> (plain text, non-secret)</td>
+      </tr>
+      <tr>
+        <th scope="row">API token <strong>Access Key ID</strong></th>
+        <td data-label="Restic Tray Field (設定 / Settings)">認証情報 (Credentials) &rarr; <strong>アクセスキー ID</strong></td>
+        <td data-label="Storage Location"><code>config\credentials.dat</code> (Windows DPAPI)</td>
+      </tr>
+      <tr>
+        <th scope="row">API token <strong>Secret Access Key</strong></th>
+        <td data-label="Restic Tray Field (設定 / Settings)">認証情報 (Credentials) &rarr; <strong>シークレットアクセスキー</strong></td>
+        <td data-label="Storage Location"><code>config\credentials.dat</code> (Windows DPAPI)</td>
+      </tr>
+      <tr>
+        <th scope="row">Strong user-chosen encryption password</th>
+        <td data-label="Restic Tray Field (設定 / Settings)">認証情報 (Credentials) &rarr; <strong>リポジトリのパスワード</strong></td>
+        <td data-label="Storage Location"><code>config\credentials.dat</code> (Windows DPAPI)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+        <aside class="callout callout-caution" aria-label="Back up your Restic repository password outside Restic Tray">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>Back up your Restic repository password outside Restic Tray</span></div>
+  <p><code>config\credentials.dat</code> is encrypted with Windows DPAPI bound to your current PC and Windows user account. If your PC is lost or Windows is reinstalled, <code>credentials.dat</code> cannot be decrypted elsewhere. You can always issue a new R2 API token from Cloudflare, but <strong>if you lose your Restic repository password, your encrypted backups in R2 are permanently unrecoverable</strong>. Store a copy in a password manager or offline recovery sheet.</p>
+</aside>
+        <ol start="3">
+          <li>Click <strong>保存</strong> (Save / <kbd>Ctrl</kbd>+<kbd>S</kbd>) in the bottom save bar to write the storage configuration to <code>config.json</code>.</li>
+          <li>Click <strong>認証情報を保存</strong> (Save credentials) to encrypt and store the R2 keys and repository password in <code>config\credentials.dat</code>.</li>
+          <li>Click <strong>リポジトリを作成</strong> (Initialize repository) for a brand-new bucket or prefix. If connecting to a repository already initialized on another PC, click <strong>接続を確認</strong> (Verify connection) instead.</li>
+          <li>Open <strong>フォルダ</strong> (Folders) to add folders, then run <strong>テスト実行</strong> (Dry-Run) on <strong>概要</strong> (Overview) before your first full backup.</li>
+        </ol>
+
+        <h2 id="prefix">Prefix Guidelines (Single PC vs. Multi-PC)</h2>
+        <ul>
+          <li><strong>Single PC</strong>: Either leave <strong>バケット内のフォルダ</strong> (Prefix) blank to place the repository at the bucket root, or set a prefix such as <code>workstation</code> (default is <code>restic-windows</code>). Using a prefix lets you keep separate repositories in one bucket and safely delete only that prefix later.</li>
+          <li><strong>Shared repository across multiple PCs</strong>: Configure the <strong>same Account ID, Bucket, Prefix, and Restic repository password</strong> on every PC. You can (and should) still issue a separate R2 API token for each PC.</li>
+        </ul>
+
+        <h2 id="token-rotation">Rotating a Leaked API Token</h2>
+        <p>If an R2 Access Key ID or Secret Access Key is ever exposed in logs or a public issue:</p>
+        <ol>
+          <li>Immediately <strong>Revoke / Delete</strong> the compromised token under Cloudflare Dashboard &rarr; <strong>R2 Object Storage &rarr; Manage R2 API Tokens</strong>.</li>
+          <li>Issue a fresh bucket-scoped <strong>Object Read &amp; Write</strong> token.</li>
+          <li>In Restic Tray <strong>設定 &rarr; 認証情報</strong>, enter the new <strong>アクセスキー ID</strong> and <strong>シークレットアクセスキー</strong> and click <strong>認証情報を保存</strong>. Leaving the <strong>リポジトリのパスワード</strong> field empty preserves your existing stored repository password.</li>
+          <li>Run <strong>接続を確認</strong> (Verify connection) to confirm access with the rotated credentials.</li>
+        </ol>
+
+      <nav class="doc-pager" aria-label="Pagination">
+        <a class="pager-link prev" href="installation.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Previous</span>
+          <span class="pager-title">Installation &amp; Verification</span>
+        </a>
+        <a class="pager-link next" href="usage.html">
+          <span class="pager-dir">Next<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">Basic Usage</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="docs-toc-title">On this page</p>
+        <ul>
+          <li><a href="#create-bucket">1. Create an R2 Bucket</a></li>
+          <li><a href="#account-id">2. Find Account ID</a></li>
+          <li><a href="#api-token">3. Create API Token</a></li>
+          <li><a href="#configure-app">4. Configure &amp; Initialize</a></li>
+          <li><a href="#prefix">Prefix Guidelines</a></li>
+          <li><a href="#token-rotation">Rotating a Leaked Token</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.</p>
+        </div>
+        <div class="footer-col">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="installation.html">Installation &amp; Verification</a></li>
+            <li><a href="setup.html">Cloudflare R2 Setup</a></li>
+            <li><a href="mcp.html">MCP Integration (22 Tools)</a></li>
+            <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+            <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">Changelog</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Unofficial open-source project. Not affiliated with, endorsed by, or sponsored by restic or Cloudflare.</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>

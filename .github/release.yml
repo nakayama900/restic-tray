@@ -1,0 +1,26 @@
+# Release notes categorization for GitHub automatically generated release notes.
+# Label names must match .github/labels.yml.
+changelog:
+  exclude:
+    labels:
+      - "Close: Duplicate"
+      - "Close: Wontfix"
+  categories:
+    - title: Security
+      labels:
+        - "Problem: Security"
+    - title: Features & Enhancements
+      labels:
+        - "Feedback: Feature Request"
+    - title: Bug Fixes
+      labels:
+        - "Problem: Bug"
+    - title: Documentation
+      labels:
+        - "PR: Documentation"
+    - title: Dependencies
+      labels:
+        - "PR: Dependencies"
+    - title: Maintenance & Other Changes
+      labels:
+        - "*"

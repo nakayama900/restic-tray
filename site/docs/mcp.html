@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>MCP Integration (22 Tools) | Restic Tray Docs</title>
+  <meta name="description" content="Configure Restic Tray&#x27;s built-in MCP server (--mcp) with Claude Code, Claude Desktop, and Cursor. Complete reference for all 22 tools and safety defaults.">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/docs/mcp.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/mcp.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/mcp.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/mcp.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="MCP Integration (22 Tools) | Restic Tray Docs">
+  <meta property="og:description" content="Configure Restic Tray&#x27;s built-in MCP server (--mcp) with Claude Code, Claude Desktop, and Cursor. Complete reference for all 22 tools and safety defaults.">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/docs/mcp.html">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MCP Integration (22 Tools) | Restic Tray Docs">
+  <meta name="twitter:description" content="Configure Restic Tray&#x27;s built-in MCP server (--mcp) with Claude Code, Claude Desktop, and Cursor. Complete reference for all 22 tools and safety defaults.">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.","url":"https://nayuengin.github.io/restic-tray/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Client-side encrypted Restic backups (AES-256-CTR + Poly1305-AES) to Cloudflare R2","Windows DPAPI + secondary entropy + Zeroize credential isolation (credentials.dat)","Single-binary built-in 22-tool MCP server (--mcp) with Named Pipe mutual authentication","Built-in cache and Unity project-root excludes plus excludeIfPresent marker support","Automated periodic restore checks (5% every 7 days) and Windows overdue toast alerts (48h default)","Standard restic repository format recoverable anytime with the standalone restic CLI"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://nayuengin.github.io/restic-tray/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://nayuengin.github.io/restic-tray/docs/"},{"@type":"ListItem","position":3,"name":"MCP Integration","item":"https://nayuengin.github.io/restic-tray/docs/mcp.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"MCP Integration (--mcp)","inLanguage":"en","url":"https://nayuengin.github.io/restic-tray/docs/mcp.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li><a href="mcp.html" aria-current="page">MCP</a></li>
+          <li><a href="installation.html">Download</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../ja/docs/mcp.html" hreflang="ja" lang="ja">日本語</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">Switch to dark theme</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">Switch to light theme</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>Documentation menu: MCP Integration</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="Documentation menu">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html" aria-current="page">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="Documentation">
+        <p class="docs-nav-heading">Documentation</p>
+        <nav aria-label="Documentation">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html" aria-current="page">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li aria-current="page">MCP Integration</li>
+          </ol>
+        </nav>
+
+        <h1>MCP Integration (--mcp)</h1>
+        <p class="doc-lead">Connect AI coding agents to Restic Tray's built-in 22-tool stdio MCP server with local Named Pipe authentication and opt-in destructive safeguards.</p>
+
+        <p>The same single binary ships with a built-in <a href="https://modelcontextprotocol.io/" rel="noopener noreferrer">Model Context Protocol (MCP)</a> stdio JSON-RPC 2.0 server invoked via <code>restic-tray.exe --mcp</code>. AI coding agents such as Claude Code, Claude Desktop, and Cursor can verify backup status before risky refactors, trigger dry-runs, diff snapshots, and restore files safely.</p>
+
+        <h2 id="architecture">How Communication Works</h2>
+        <div class="code-block">
+  <div class="code-header">
+    <span>Architecture</span>
+    <button class="copy-btn" type="button" aria-label="Copy Architecture code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="MCP stdio and Named Pipe relay architecture" tabindex="0"><code>MCP Client
+  ── stdio (JSON-RPC 2.0) ──▶ restic-tray.exe --mcp
+  ── Named Pipe (256-bit mutual token) ──▶ Running Tray App</code></pre>
+</div>
+        <ul>
+          <li><strong>Tray app running</strong>: <code>--mcp</code> reads the ephemeral pipe name and 256-bit CSPRNG token from <code>%LOCALAPPDATA%\io.github.nayuengin.restic-tray\agent-bridge.json</code>, authenticates in constant time, and relays requests over a local Windows Named Pipe (<code>reject_remote_clients(true)</code>). Results appear immediately in the GUI and SQLite audit log.</li>
+          <li><strong>Headless fallback</strong>: If the tray app is closed, <code>--mcp</code> seamlessly falls back to a local controller so agents can still inspect status, edit settings, and run backups.</li>
+        </ul>
+
+        <h2 id="register">Registering with MCP Clients</h2>
+        <h3>Claude Code</h3>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="Copy PowerShell code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="Register restic-tray MCP server in Claude Code" tabindex="0"><code>claude mcp add --scope user restic-tray -- &quot;$env:LOCALAPPDATA\Programs\Restic Tray\restic-tray.exe&quot; --mcp</code></pre>
+</div>
+
+        <h3>Claude Desktop / Cursor (<code>mcpServers</code> JSON)</h3>
+        <div class="code-block">
+  <div class="code-header">
+    <span>JSON</span>
+    <button class="copy-btn" type="button" aria-label="Copy JSON code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="mcpServers JSON configuration for Claude Desktop or Cursor" tabindex="0"><code>{
+  &quot;mcpServers&quot;: {
+    &quot;restic-tray&quot;: {
+      &quot;command&quot;: &quot;C:\\Users\\&lt;YourUser&gt;\\AppData\\Local\\Programs\\Restic Tray\\restic-tray.exe&quot;,
+      &quot;args&quot;: [&quot;--mcp&quot;]
+    }
+  }
+}</code></pre>
+</div>
+        <p>If you installed via Portable ZIP, point <code>command</code> to the extracted <code>restic-tray.exe</code> path.</p>
+
+        <h2 id="safety">Security Model &amp; Safety Defaults</h2>
+        <aside class="callout" aria-label="Default-safe agent policy in config.json">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Default-safe agent policy in config.json</span></div>
+  <ul><li><strong>No secret access</strong>: Credentials are never returned or accepted over MCP, and changing <code>resticBinaryPath</code> via MCP is blocked.</li><li><strong><code>agent.enabled</code> (default: <code>true</code>)</strong>: Master switch for MCP operations.</li><li><strong><code>agent.allowRestore</code> (default: <code>true</code>)</strong>: Allows <code>restore_snapshot</code> into a separate validated destination protected by <code>fs_safety</code> (never overwrites original files in place).</li><li><strong><code>agent.allowPrune</code> (default: <code>false</code>)</strong>: Opt-in gate. When <code>false</code>, MCP blocks <code>forget_prune</code>, <code>update_retention_policy</code>, enabling <code>autoPruneAfterBackup</code>, changing <code>maintenanceAt</code>, and post-backup auto-pruning from MCP-initiated runs.</li><li><strong><code>agent.allowDeleteStorage</code> (default: <code>false</code>)</strong>: Opt-in gate for <code>delete_r2_bucket</code> (requires <code>dryRun: false</code> + exact <code>confirmBucketName</code>).</li><li><strong><code>agent.allowHandoff</code> (default: <code>false</code>)</strong>: Opt-in gate for <code>takeover_project</code> (requires <code>dryRun: false</code> + exact <code>confirmProjectKey</code>).</li><li><strong>Empty-array protection</strong>: Passing an empty array for <code>includePaths</code>, <code>targetIds</code>, or <code>projectKeys</code> is rejected instead of silently expanding to &ldquo;all&rdquo;.</li></ul>
+</aside>
+
+        <h2 id="tools">All 22 MCP Tools</h2>
+        <p>Tool descriptions returned inside the MCP protocol are currently in Japanese. This table provides the complete English reference for every tool and its parameters:</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="mcp-tools-caption">
+  <table>
+    <caption id="mcp-tools-caption">All 22 MCP tools exposed by restic-tray.exe --mcp</caption>
+    <thead>
+      <tr>
+        <th scope="col">Tool</th>
+        <th scope="col">Arguments</th>
+        <th scope="col">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>get_status</code></th>
+        <td data-label="Arguments">None</td>
+        <td data-label="Description">Tray state, machine name, maintenance role, active targets, multi-PC sync summary, R2/DPAPI readiness, bundled restic version, next run, active progress, and active basic excludes.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>get_config</code></th>
+        <td data-label="Arguments">None</td>
+        <td data-label="Description">Returns current non-secret <code>config.json</code> (R2 settings, targets, excludes, schedule, retention, and agent policy). Secrets are never returned.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>get_backup_history</code></th>
+        <td data-label="Arguments"><code>limit?: number</code></td>
+        <td data-label="Description">SQLite backup runs (including <code>deferred</code> runs, <code>topAdded</code>, <code>bytesDelta</code>, <code>filesDelta</code>, <code>excludesChanged</code>) and audit logs.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>list_snapshots</code></th>
+        <td data-label="Arguments"><code>tag?</code>, <code>path?</code>, <code>projectKey?</code>, <code>host?</code></td>
+        <td data-label="Description">Lists R2 snapshots with optional filtering by tag, path, shared <code>projectKey</code>, or lowercase host.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>list_snapshot_files</code></th>
+        <td data-label="Arguments"><code>snapshotId</code>, <code>prefix?</code>, <code>maxEntries?</code></td>
+        <td data-label="Description">Lists files inside a specific snapshot.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>diff_snapshots</code></th>
+        <td data-label="Arguments"><code>snapshotA</code>, <code>snapshotB</code></td>
+        <td data-label="Description">Computes diff statistics and changed paths between two snapshots.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>get_size_breakdown</code></th>
+        <td data-label="Arguments"><code>snapshotId?</code>, <code>limit?</code></td>
+        <td data-label="Description">Aggregates file sizes by target root and up to 2 subfolder levels (defaults to latest snapshot, limit 30).</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>run_backup</code></th>
+        <td data-label="Arguments"><code>targetIds?</code>, <code>projectKeys?</code>, <code>dryRun?</code>, <code>tags?</code>, <code>markHandoffReady?</code></td>
+        <td data-label="Description">Runs 1-target-1-snapshot backup to R2. Supports <code>dryRun: true</code> and optional handoff release tagging.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>cancel_backup</code></th>
+        <td data-label="Arguments">None</td>
+        <td data-label="Description">Cancels an active backup or takeover restore job immediately (including while waiting on <code>--retry-lock</code>).</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>init_repository</code></th>
+        <td data-label="Arguments">None</td>
+        <td data-label="Description">Initializes the configured R2 repository via <code>restic init</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>check_repository</code></th>
+        <td data-label="Arguments"><code>readDataPercent?: number</code></td>
+        <td data-label="Description">Runs <code>restic check</code>; pass <code>1</code>&ndash;<code>100</code> to download and verify that percentage of stored data.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>update_storage_config</code></th>
+        <td data-label="Arguments"><code>storageBackend?: "r2"</code>, <code>r2?: object</code></td>
+        <td data-label="Description">Validates and updates non-secret Cloudflare R2 settings in <code>config.json</code> (secrets and <code>resticBinaryPath</code> are rejected).</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>add_backup_target</code></th>
+        <td data-label="Arguments"><code>path</code>, <code>label?</code>, <code>excludePatterns?</code>, <code>tags?</code>, <code>enabled?</code>, <code>projectKey?</code>, <code>writerState?</code></td>
+        <td data-label="Description">Canonicalizes and adds/updates a folder target. Rejects <code>projectKey</code> on folders containing <code>.git</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>remove_backup_target</code></th>
+        <td data-label="Arguments"><code>idOrPath: string</code></td>
+        <td data-label="Description">Removes a backup target by ID or path from <code>config.json</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>update_schedule</code></th>
+        <td data-label="Arguments"><code>enabled?</code>, <code>intervalMinutes?</code>, <code>dailyAt?</code>, <code>maintenanceAt?</code>, <code>runOnStartup?</code>, <code>autoPruneAfterBackup?</code>, <code>verifyEveryDays?</code>, <code>verifyReadPercent?</code>, <code>notifyOverdueHours?</code></td>
+        <td data-label="Description">Updates schedule, periodic restore check, and overdue alert settings. Prune-affecting options require <code>agent.allowPrune: true</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>update_retention_policy</code></th>
+        <td data-label="Arguments"><code>keepLast?</code>, <code>keepDaily?</code>, <code>keepWeekly?</code>, <code>keepMonthly?</code></td>
+        <td data-label="Description">Updates snapshot retention counts. Blocked when <code>agent.allowPrune</code> is <code>false</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>restore_snapshot</code></th>
+        <td data-label="Arguments"><code>snapshotId</code>, <code>targetDir</code>, <code>includePaths?</code></td>
+        <td data-label="Description">Restores a full snapshot or specific <code>includePaths</code> into a separate validated <code>targetDir</code> (enabled by default: <code>agent.allowRestore: true</code>).</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>forget_prune</code></th>
+        <td data-label="Arguments"><code>dryRun?</code>, <code>confirmPrune?</code></td>
+        <td data-label="Description"><strong>Opt-in</strong> (<code>agent.allowPrune: true</code>). Defaults to <code>dryRun: true</code>; real prune requires both <code>dryRun: false</code> and <code>confirmPrune: true</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>delete_r2_bucket</code></th>
+        <td data-label="Arguments"><code>scope: "prefixOnly"|"entireBucket"</code>, <code>dryRun?</code>, <code>confirmBucketName?</code></td>
+        <td data-label="Description"><strong>Opt-in</strong> (<code>agent.allowDeleteStorage: true</code>). Defaults to <code>dryRun: true</code>; real delete requires <code>dryRun: false</code> and exact <code>confirmBucketName</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>get_project_sync_status</code></th>
+        <td data-label="Arguments"><code>projectKey?</code>, <code>refresh?</code>, <code>checkLocalChanges?</code></td>
+        <td data-label="Description"><em>(Experimental)</em> Reports multi-PC shared project sync state (<code>local_latest</code>, <code>remote_newer</code>, <code>not_local</code>, <code>diverged</code>, <code>standby</code>, etc.).</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>release_project</code></th>
+        <td data-label="Arguments"><code>projectKey</code>, <code>dryRun?</code></td>
+        <td data-label="Description"><em>(Experimental)</em> Checks for <code>.git</code> and <code>UnityLockfile</code>, creates a <code>handoff:released</code> snapshot, and switches this PC to <code>standby</code> without deleting local files.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>takeover_project</code></th>
+        <td data-label="Arguments"><code>projectKey</code>, <code>localPath?</code>, <code>dryRun?</code>, <code>saveLocalBackupFirst?</code>, <code>confirmDiscardLocalChanges?</code>, <code>forceWhileRemoteActive?</code>, <code>deleteExtra?</code>, <code>confirmProjectKey?</code></td>
+        <td data-label="Description"><strong>Opt-in</strong> (<code>agent.allowHandoff: true</code>, <em>experimental</em>). Defaults to <code>dryRun: true</code>; real takeover requires exact <code>confirmProjectKey</code> and backs up local edits first unless explicitly confirmed.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+      <nav class="doc-pager" aria-label="Pagination">
+        <a class="pager-link prev" href="usage.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Previous</span>
+          <span class="pager-title">Basic Usage</span>
+        </a>
+        <a class="pager-link next" href="backup-restore.html">
+          <span class="pager-dir">Next<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">Backup &amp; Restore</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="docs-toc-title">On this page</p>
+        <ul>
+          <li><a href="#architecture">Communication Architecture</a></li>
+          <li><a href="#register">Client Registration</a></li>
+          <li><a href="#safety">Security &amp; Safety Defaults</a></li>
+          <li><a href="#tools">All 22 MCP Tools</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.</p>
+        </div>
+        <div class="footer-col">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="installation.html">Installation &amp; Verification</a></li>
+            <li><a href="setup.html">Cloudflare R2 Setup</a></li>
+            <li><a href="mcp.html">MCP Integration (22 Tools)</a></li>
+            <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+            <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">Changelog</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Unofficial open-source project. Not affiliated with, endorsed by, or sponsored by restic or Cloudflare.</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>

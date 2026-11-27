@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>Basic Usage | Restic Tray Docs</title>
+  <meta name="description" content="Learn daily operation in Restic Tray: tray mode, drag-and-drop folders, Unity-aware default excludes, dailyAt schedules, periodic restore checks, SQLite history, and config.json.">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/docs/usage.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/usage.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/usage.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/usage.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="Basic Usage | Restic Tray Docs">
+  <meta property="og:description" content="Learn daily operation in Restic Tray: tray mode, drag-and-drop folders, Unity-aware default excludes, dailyAt schedules, periodic restore checks, SQLite history, and config.json.">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/docs/usage.html">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Basic Usage | Restic Tray Docs">
+  <meta name="twitter:description" content="Learn daily operation in Restic Tray: tray mode, drag-and-drop folders, Unity-aware default excludes, dailyAt schedules, periodic restore checks, SQLite history, and config.json.">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.","url":"https://nayuengin.github.io/restic-tray/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Client-side encrypted Restic backups (AES-256-CTR + Poly1305-AES) to Cloudflare R2","Windows DPAPI + secondary entropy + Zeroize credential isolation (credentials.dat)","Single-binary built-in 22-tool MCP server (--mcp) with Named Pipe mutual authentication","Built-in cache and Unity project-root excludes plus excludeIfPresent marker support","Automated periodic restore checks (5% every 7 days) and Windows overdue toast alerts (48h default)","Standard restic repository format recoverable anytime with the standalone restic CLI"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://nayuengin.github.io/restic-tray/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://nayuengin.github.io/restic-tray/docs/"},{"@type":"ListItem","position":3,"name":"Basic Usage","item":"https://nayuengin.github.io/restic-tray/docs/usage.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Basic Usage","inLanguage":"en","url":"https://nayuengin.github.io/restic-tray/docs/usage.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">Home</a></li>
+          <li><a href="./" aria-current="page">Docs</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">Download</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../ja/docs/usage.html" hreflang="ja" lang="ja">日本語</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">Switch to dark theme</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">Switch to light theme</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>Documentation menu: Basic Usage</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="Documentation menu">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html" aria-current="page">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="Documentation">
+        <p class="docs-nav-heading">Documentation</p>
+        <nav aria-label="Documentation">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html" aria-current="page">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li aria-current="page">Basic Usage</li>
+          </ol>
+        </nav>
+
+        <h1>Basic Usage</h1>
+        <p class="doc-lead">Day-to-day workflows in Restic Tray: tray operation, folder management, Unity-aware excludes, scheduling, restore checks, history, and config.json.</p>
+
+        <h2 id="overview-tray">Overview Screen &amp; System Tray</h2>
+        <p>The <strong>概要</strong> (Overview) page shows your protection status, time since the last successful backup, next scheduled run, active target count, destination bucket, bundled <code>restic</code> version, and a 7-day hourly coverage grid.</p>
+        <figure>
+          <picture>
+  <source srcset="../assets/screenshots/overview.webp" type="image/webp">
+  <img src="../assets/screenshots/overview.png" alt="Restic Tray Overview screen showing backup status and 7-day hourly coverage grid" width="1240" height="820" loading="lazy">
+</picture>
+          <figcaption>Overview (<code>概要</code>) screen displaying recent runs and 7-day hourly dots.</figcaption>
+        </figure>
+        <ul>
+          <li><strong>Close to tray</strong>: Clicking the window close (<code>&times;</code>) or minimize button hides Restic Tray to the Windows system tray and stops UI rendering so idle CPU stays near zero.</li>
+          <li><strong>Tray right-click menu</strong>: Open the window, run an immediate backup, or quit the application cleanly. Launching a second instance automatically brings the existing window to the foreground.</li>
+          <li><strong>Dark / Light themes</strong>: Switch between ink-dark and paper-light themes from the bottom-left sidebar icon or <code>config.json</code> (<code>"theme": "dark" | "light"</code>).</li>
+        </ul>
+
+        <h2 id="folders">Managing Backup Folders</h2>
+        <p>Open <strong>フォルダ</strong> (Folders) to add directories with <strong>フォルダを追加</strong> or by dragging and dropping folders directly onto the window. Each target creates its own independent snapshot per backup run (1 target = 1 snapshot), making browsing, retention, and selective restore straightforward.</p>
+        <p>Target paths are canonicalized via <code>dunce::canonicalize</code>. You can toggle individual targets on/off, attach custom tags (note: <code>project:</code>, <code>handoff:</code>, and <code>excludes:</code> are reserved prefixes), and set per-target exclude patterns.</p>
+
+        <h2 id="excludes">Built-in Excludes &amp; Unity Awareness</h2>
+        <p>By default, <strong>基本の除外パターンを有効にする</strong> (<code>useBasicExcludes: true</code>) keeps regenerable caches and temporary files out of your R2 bucket while preserving real work (including <code>.git</code> folders):</p>
+        <ul>
+          <li><strong>General build &amp; cache patterns</strong> (matched at any depth): <code>target/</code>, <code>node_modules/</code>, <code>.venv/</code>, <code>.pytest_cache/</code>, <code>__pycache__/</code>, <code>.git/objects/pack/tmp_pack_*</code>, <code>*.tmp</code>, <code>*.part</code>, <code>.next/</code>, <code>shadercompiler-*.log</code>, <code>AssetImportWorker*.log</code>.</li>
+          <li><strong>Unity project-root generated folders</strong> (detected automatically under any folder containing <code>ProjectSettings\ProjectVersion.txt</code>, up to 3 levels below a target): <code>Library</code>, <code>Temp</code>, <code>Logs</code>, <code>obj</code>, <code>Build</code>, <code>Builds</code>, and <code>Assets\SerializedUdonPrograms</code>. Same-named folders deeper inside <code>Assets/</code> or <code>Packages/</code> are <em>not</em> excluded.</li>
+          <li><strong>Marker-based folder excludes (<code>excludeIfPresent</code>)</strong>: Any folder containing <code>SourceAssetDB</code>, <code>UnityLockfile</code>, <code>CACHEDIR.TAG</code> (with standard cache header), or <code>pyvenv.cfg</code> is skipped automatically, and you can add custom markers in <code>config.json</code>.</li>
+        </ul>
+        <p>As a safety guard, Restic Tray refuses to run a backup if any exclude pattern matches the target folder path itself (which would silently back up zero files). Turn off <code>useBasicExcludes</code> on the <strong>フォルダ</strong> screen if you intentionally want generated artifacts included.</p>
+
+        <h2 id="schedule">Schedules, Restore Checks &amp; Overdue Alerts</h2>
+        <p>Configure automated runs under <strong>設定 &rarr; スケジュール</strong> or in <code>config.json</code>:</p>
+        <ul>
+          <li><strong>Interval or Daily Times</strong>: Run every <code>intervalMinutes</code> (default: <code>60</code> minutes) or specify fixed local 24-hour times via <code>dailyAt</code> (e.g. <code>["05:00", "17:00"]</code>; when set, <code>intervalMinutes</code> is ignored). Scheduled starts apply a small 0&ndash;60 second jitter.</li>
+          <li><strong>Periodic restore verification</strong>: Runs <code>restic check --read-data-subset</code> every <code>verifyEveryDays</code> days (default: <code>7</code>, <code>0</code> disables) reading back <code>verifyReadPercent</code>% of stored data (default: <code>5</code>%). Failures trigger a Windows toast notification.</li>
+          <li><strong>Overdue notifications</strong>: Raises a Windows toast notification if no backup succeeds within <code>notifyOverdueHours</code> hours (default: <code>48</code>, <code>0</code> disables).</li>
+          <li><strong>Retention policy (<code>retention</code>)</strong>: Defaults to <code>keepLast: 10</code>, <code>keepDaily: 7</code>, <code>keepWeekly: 4</code>, <code>keepMonthly: 6</code>. Automatic post-backup pruning (<code>autoPruneAfterBackup</code>) is disabled by default; when enabled (or scheduled via <code>maintenanceAt</code> on a <code>maintenanceRole: "primary"</code> PC), Restic Tray runs <code>forget --prune</code> safely.</li>
+        </ul>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="usage-defaults-caption">
+  <table>
+    <caption id="usage-defaults-caption">Default schedule, verification, retention, and exclusion settings</caption>
+    <thead>
+      <tr>
+        <th scope="col">Setting</th>
+        <th scope="col">Config Key</th>
+        <th scope="col">Default Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">R2 region / connections</th>
+        <td data-label="Config Key"><code>r2.region</code> / <code>r2.maxConnections</code></td>
+        <td data-label="Default Value"><code>"auto"</code> / <code>10</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Backup interval / daily times</th>
+        <td data-label="Config Key"><code>schedule.intervalMinutes</code> / <code>schedule.dailyAt</code></td>
+        <td data-label="Default Value"><code>60</code> min / <code>[]</code> (0&ndash;60 s startup jitter)</td>
+      </tr>
+      <tr>
+        <th scope="row">Periodic restore check</th>
+        <td data-label="Config Key"><code>schedule.verifyEveryDays</code> / <code>verifyReadPercent</code></td>
+        <td data-label="Default Value">Every <code>7</code> days / <code>5</code>% read-back (<code>0</code> disables)</td>
+      </tr>
+      <tr>
+        <th scope="row">Overdue toast alert</th>
+        <td data-label="Config Key"><code>schedule.notifyOverdueHours</code></td>
+        <td data-label="Default Value"><code>48</code> hours (<code>0</code> disables)</td>
+      </tr>
+      <tr>
+        <th scope="row">Auto-prune after backup</th>
+        <td data-label="Config Key"><code>schedule.autoPruneAfterBackup</code></td>
+        <td data-label="Default Value"><code>false</code> (opt-in)</td>
+      </tr>
+      <tr>
+        <th scope="row">Retention counts</th>
+        <td data-label="Config Key"><code>retention.keepLast</code> / <code>Daily</code> / <code>Weekly</code> / <code>Monthly</code></td>
+        <td data-label="Default Value"><code>10</code> / <code>7</code> / <code>4</code> / <code>6</code></td>
+      </tr>
+      <tr>
+        <th scope="row">Built-in excludes</th>
+        <td data-label="Config Key"><code>useBasicExcludes</code></td>
+        <td data-label="Default Value"><code>true</code> (caches, Unity project-root outputs, marker files)</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="history">History, Size Breakdown &amp; Audit Log</h2>
+        <p>The <strong>履歴</strong> (History) screen reads local SQLite (WAL) logs stored in <code>r2_restic_history.db</code>:</p>
+        <ul>
+          <li><strong>Backup runs tab (バックアップ)</strong>: Shows timestamp, trigger source (Scheduled, Manual, MCP), target, new/changed file counts, delta vs. the previous production run (including exclude-change flags), stored bytes, and duration. Lock-deferred runs appear with status <code>deferred</code> and automatically retry after 15 minutes (up to 2 retries).</li>
+          <li><strong>Audit log tab (操作ログ)</strong>: Records every settings update, backup, restore, prune, and MCP invocation.</li>
+          <li><strong>Size breakdown</strong>: Inspect which subfolders contribute the most stored bytes in a snapshot from the app or via MCP <code>get_size_breakdown</code>.</li>
+        </ul>
+
+        <h2 id="config-files">Declarative <code>config.json</code> &amp; Data Directory</h2>
+        <p>All per-user runtime files live under <code>%LOCALAPPDATA%\io.github.nayuengin.restic-tray\</code>. You can edit <code>config.json</code> directly (click <strong>config.json を開く</strong> in Settings) and reload, or manage everything through the GUI and MCP.</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="runtime-files-caption">
+  <table>
+    <caption id="runtime-files-caption">Runtime files stored under %LOCALAPPDATA%\io.github.nayuengin.restic-tray\</caption>
+    <thead>
+      <tr>
+        <th scope="col">File</th>
+        <th scope="col">Purpose</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><code>config.json</code></th>
+        <td data-label="Purpose">Non-secret declarative settings: R2 target (<code>r2</code>), folders (<code>targets</code>), excludes, <code>schedule</code>, <code>retention</code>, <code>agent</code> policies, and theme.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>config\credentials.dat</code></th>
+        <td data-label="Purpose">Windows DPAPI-encrypted R2 Access Key ID, Secret Access Key, and Restic repository password.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>r2_restic_history.db</code></th>
+        <td data-label="Purpose">SQLite (WAL) database storing backup run history, GUI/tray/MCP audit logs, and multi-PC sync state.</td>
+      </tr>
+      <tr>
+        <th scope="row"><code>agent-bridge.json</code></th>
+        <td data-label="Purpose">Ephemeral local Named Pipe address and 256-bit mutual authentication token written while the tray app is running.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="cleanup-and-multipc">Safe R2 Cleanup &amp; Multi-PC Handoff</h2>
+        <ul>
+          <li><strong>R2 prefix / bucket deletion</strong>: Under <strong>設定 &rarr; 保存先 &rarr; バケット・データの削除（危険な操作）</strong>, the built-in pure-Rust S3 client supports deleting objects under your configured prefix (<code>prefixOnly</code>) or emptying and deleting the entire bucket (<code>entireBucket</code>). The GUI enforces a Dry-Run count preview, exact bucket-name confirmation, and a 1.5-second press-and-hold confirmation button.</li>
+          <li><strong>Multi-PC shared project handoff <em>(experimental)</em></strong>: For non-Git folders shared across two or more Windows PCs (such as Unity projects or creative workspaces), you can assign a stable <code>projectKey</code> and use single-writer handoff (<strong>引き渡す</strong> / <strong>この PC に取得して引き継ぐ</strong>) with automatic subpath rewriting and pre-takeover safety backups. Only one PC should use <code>maintenanceRole: "primary"</code>. Folders containing <code>.git</code> are rejected for handoff — use Git for syncing Git repositories.</li>
+        </ul>
+
+      <nav class="doc-pager" aria-label="Pagination">
+        <a class="pager-link prev" href="setup.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Previous</span>
+          <span class="pager-title">Initial Setup &amp; Cloudflare R2</span>
+        </a>
+        <a class="pager-link next" href="mcp.html">
+          <span class="pager-dir">Next<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">MCP Integration</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="docs-toc-title">On this page</p>
+        <ul>
+          <li><a href="#overview-tray">Overview &amp; System Tray</a></li>
+          <li><a href="#folders">Managing Folders</a></li>
+          <li><a href="#excludes">Built-in &amp; Unity Excludes</a></li>
+          <li><a href="#schedule">Schedules &amp; Verification</a></li>
+          <li><a href="#history">History &amp; Audit Log</a></li>
+          <li><a href="#config-files">config.json &amp; Data Files</a></li>
+          <li><a href="#cleanup-and-multipc">R2 Cleanup &amp; Multi-PC</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.</p>
+        </div>
+        <div class="footer-col">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="installation.html">Installation &amp; Verification</a></li>
+            <li><a href="setup.html">Cloudflare R2 Setup</a></li>
+            <li><a href="mcp.html">MCP Integration (22 Tools)</a></li>
+            <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+            <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">Changelog</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Unofficial open-source project. Not affiliated with, endorsed by, or sponsored by restic or Cloudflare.</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>

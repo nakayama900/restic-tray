@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (Windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@39008827e6b4319a349e9a42dfc90579dd25f1ca # stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Restore Rust cache
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
+
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@893d6ee8d714b6c7dfe2bcd94e5759e9a7958a7e # v2
+        with:
+          tool: cargo-deny
+
+      - name: Set up Python (for THIRD_PARTY_NOTICES.md freshness check)
+        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+
+      - name: Download pinned restic.exe for real-Restic E2E tests
+        shell: pwsh
+        run: ./scripts/download-restic.ps1
+
+      - name: Run quality gate (fmt, clippy, tests, real-Restic E2E, cargo-deny)
+        shell: pwsh
+        run: ./scripts/verify.ps1 -RequireAll
+
+      - name: Verify THIRD_PARTY_NOTICES.md is up to date
+        shell: pwsh
+        run: python scripts/generate-third-party-notices.py --check

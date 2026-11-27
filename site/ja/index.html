@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>Restic Tray — Cloudflare R2 + Restic の Windows 暗号化バックアップ &amp; MCP 常駐アプリ</title>
+  <meta name="description" content="Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="Restic Tray — Cloudflare R2 + Restic の Windows 暗号化バックアップ &amp; MCP 常駐アプリ">
+  <meta property="og:description" content="Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Restic Tray — Cloudflare R2 + Restic の Windows 暗号化バックアップ &amp; MCP 常駐アプリ">
+  <meta name="twitter:description" content="Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="./">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="./" aria-current="page">ホーム</a></li>
+          <li><a href="docs/">ドキュメント</a></li>
+          <li><a href="docs/mcp.html">MCP</a></li>
+          <li><a href="docs/installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <section class="hero">
+      <div class="container">
+        <div class="hero-head">
+          <ul class="release-line" aria-label="リリース情報"><li><span class="status-dot" aria-hidden="true"></span>v1.0.0</li><li>Windows 10/11 x64</li><li>MIT</li><li>テレメトリなし</li></ul>
+          <h1>Cloudflare R2 への暗号化バックアップを、Windows トレイで静かに。</h1>
+          <p class="hero-lead">
+            Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。未コミットの作業ファイルやバイナリ素材も自分の R2 バケットへ保存し、アプリなしでも復元できます。
+          </p>
+          <div class="btn-group">
+            <a class="btn btn-primary" href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Windows 版をダウンロード (v1.0.0)</span>
+            </a>
+            <a class="btn btn-secondary" href="docs/">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><span>ドキュメントを読む</span>
+            </a>
+          </div>
+          <div class="hero-meta">
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>公式 <code>restic.exe</code> v0.20.0 同梱</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Windows DPAPI による秘密情報隔離</span>
+            <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>GUI・MCP ツール説明は日本語対応</span>
+          </div>
+        </div>
+
+        <div class="ledger" aria-hidden="true">
+          <div class="ledger-head"><span class="ledger-title">直近 7 日間</span><span class="ledger-legend"><span class="ledger-key is-on"></span>成功<span class="ledger-key"></span>なし</span></div>
+          <div class="ledger-body"><ul class="ledger-days"><li>今日</li><li>昨日</li><li>2日前</li><li>3日前</li><li>4日前</li><li>5日前</li><li>6日前</li></ul><div class="ledger-grid"><i class="on" style="--c:5;grid-area:1/6"></i><i class="on latest" style="--c:19;grid-area:1/20"></i><i class="on" style="--c:5;grid-area:2/6"></i><i class="on" style="--c:17;grid-area:2/18"></i><i class="on" style="--c:5;grid-area:3/6"></i><i class="on" style="--c:17;grid-area:3/18"></i><i class="on" style="--c:5;grid-area:4/6"></i><i class="on" style="--c:17;grid-area:4/18"></i><i class="on" style="--c:5;grid-area:5/6"></i><i class="on" style="--c:17;grid-area:5/18"></i><i class="on" style="--c:5;grid-area:6/6"></i><i class="on" style="--c:17;grid-area:6/18"></i><i class="on" style="--c:5;grid-area:7/6"></i><i class="on" style="--c:17;grid-area:7/18"></i></div></div>
+          <div class="ledger-axis"><span>0時</span><span>6時</span><span>12時</span><span>18時</span><span>23時</span></div>
+        </div>
+
+        <div class="showcase">
+          <div class="showcase-tabs" role="tablist" aria-label="アプリの画面一覧">
+          <button class="tab-btn" type="button" role="tab" id="tab-overview" aria-selected="true" aria-controls="panel-overview" tabindex="0">概要</button>
+          <button class="tab-btn" type="button" role="tab" id="tab-targets" aria-selected="false" aria-controls="panel-targets" tabindex="-1">フォルダ</button>
+          <button class="tab-btn" type="button" role="tab" id="tab-snapshots" aria-selected="false" aria-controls="panel-snapshots" tabindex="-1">スナップショット</button>
+          <button class="tab-btn" type="button" role="tab" id="tab-history" aria-selected="false" aria-controls="panel-history" tabindex="-1">履歴</button>
+          <button class="tab-btn" type="button" role="tab" id="tab-settings" aria-selected="false" aria-controls="panel-settings" tabindex="-1">設定</button>
+          </div>
+          <div class="showcase-frame">
+        <div class="showcase-panel" role="tabpanel" id="panel-overview" aria-labelledby="tab-overview">
+          <figure>
+            <div class="app-window"><div class="app-window-bar" aria-hidden="true"><img src="../assets/icon.svg" alt="" width="16" height="16"><span class="app-window-title">Restic Tray</span><span class="app-window-controls"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5"/></svg><svg viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg></span></div><picture>
+  <source srcset="../assets/screenshots/overview.webp" type="image/webp">
+  <img src="../assets/screenshots/overview.png" alt="Restic Tray の概要画面。最終バックアップ経過時間、直近7日間の1時間単位グリッド、今すぐバックアップボタンを表示" width="1240" height="820" fetchpriority="high">
+</picture></div>
+            <figcaption>
+              <span class="caption-text"><strong>概要</strong> 最後に成功してからの経過時間、直近 7 日間の 1 時間単位グリッド、ワンクリックのバックアップとテスト実行。</span>
+              <span class="caption-note">架空デモデータによる隔離環境キャプチャ</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="showcase-panel" role="tabpanel" id="panel-targets" aria-labelledby="tab-targets" hidden>
+          <figure>
+            <div class="app-window"><div class="app-window-bar" aria-hidden="true"><img src="../assets/icon.svg" alt="" width="16" height="16"><span class="app-window-title">Restic Tray</span><span class="app-window-controls"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5"/></svg><svg viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg></span></div><picture>
+  <source srcset="../assets/screenshots/targets.webp" type="image/webp">
+  <img src="../assets/screenshots/targets.png" alt="Restic Tray のフォルダ画面。バックアップ対象一覧、基本の除外パターンの切り替え、複数 PC 共有プロジェクトを表示" width="1240" height="820" fetchpriority="low" loading="lazy">
+</picture></div>
+            <figcaption>
+              <span class="caption-text"><strong>フォルダ</strong> ドラッグ＆ドロップで対象を追加し、Unity 対応の基本除外や実験的な複数 PC 引き継ぎを管理。</span>
+              <span class="caption-note">架空デモデータによる隔離環境キャプチャ</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="showcase-panel" role="tabpanel" id="panel-snapshots" aria-labelledby="tab-snapshots" hidden>
+          <figure>
+            <div class="app-window"><div class="app-window-bar" aria-hidden="true"><img src="../assets/icon.svg" alt="" width="16" height="16"><span class="app-window-title">Restic Tray</span><span class="app-window-controls"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5"/></svg><svg viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg></span></div><picture>
+  <source srcset="../assets/screenshots/snapshots.webp" type="image/webp">
+  <img src="../assets/screenshots/snapshots.png" alt="Restic Tray のスナップショット画面。スナップショット一覧、ファイル確認、差分比較、安全な復元パネルを表示" width="1240" height="820" fetchpriority="low" loading="lazy">
+</picture></div>
+            <figcaption>
+              <span class="caption-text"><strong>スナップショット</strong> R2 上の履歴を一覧表示し、中身確認・差分比較・全体または部分復元を安全に実行。</span>
+              <span class="caption-note">架空デモデータによる隔離環境キャプチャ</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="showcase-panel" role="tabpanel" id="panel-history" aria-labelledby="tab-history" hidden>
+          <figure>
+            <div class="app-window"><div class="app-window-bar" aria-hidden="true"><img src="../assets/icon.svg" alt="" width="16" height="16"><span class="app-window-title">Restic Tray</span><span class="app-window-controls"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5"/></svg><svg viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg></span></div><picture>
+  <source srcset="../assets/screenshots/history.webp" type="image/webp">
+  <img src="../assets/screenshots/history.png" alt="Restic Tray の履歴画面。SQLite に記録されたバックアップ実行結果と GUI・MCP の操作ログを表示" width="1240" height="820" fetchpriority="low" loading="lazy">
+</picture></div>
+            <figcaption>
+              <span class="caption-text"><strong>履歴</strong> すべての実行結果（新規・変更件数、前回比増減、保存量、所要時間）と操作監査ログをローカル SQLite に保存。</span>
+              <span class="caption-note">架空デモデータによる隔離環境キャプチャ</span>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="showcase-panel" role="tabpanel" id="panel-settings" aria-labelledby="tab-settings" hidden>
+          <figure>
+            <div class="app-window"><div class="app-window-bar" aria-hidden="true"><img src="../assets/icon.svg" alt="" width="16" height="16"><span class="app-window-title">Restic Tray</span><span class="app-window-controls"><svg viewBox="0 0 10 10"><path d="M0 5.5h10"/></svg><svg viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" rx="1.5"/></svg><svg viewBox="0 0 10 10"><path d="M0.5 0.5l9 9M9.5 0.5l-9 9"/></svg></span></div><picture>
+  <source srcset="../assets/screenshots/settings.webp" type="image/webp">
+  <img src="../assets/screenshots/settings.png" alt="Restic Tray の設定画面。Cloudflare R2 の保存先設定と Windows DPAPI 暗号化の認証情報入力欄を表示" width="1240" height="820" fetchpriority="low" loading="lazy">
+</picture></div>
+            <figcaption>
+              <span class="caption-text"><strong>設定</strong> R2 の接続先は config.json に保存し、API キーとパスワードは Windows DPAPI で別ファイルへ隔離。</span>
+              <span class="caption-note">架空デモデータによる隔離環境キャプチャ</span>
+            </figcaption>
+          </figure>
+        </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="facts-strip" aria-label="主な技術仕様と保証">
+      <div class="container">
+        <ul class="facts-grid">
+          <li class="fact-item">
+            <div class="fact-value">AES-256 + DPAPI</div>
+            <div class="fact-label">送信前に PC 上で暗号化し、認証情報は <code>credentials.dat</code> へ分離保存。</div>
+          </li>
+          <li class="fact-item">
+            <div class="fact-value">エグレス料金 $0</div>
+            <div class="fact-label">Cloudflare R2 の S3 互換 API に直接接続。復元や読み戻し確認の転送料が不要。</div>
+          </li>
+          <li class="fact-item">
+            <div class="fact-value">22 MCP ツール</div>
+            <div class="fact-label"><code>--mcp</code> 単一バイナリ内蔵。名前付きパイプ相互認証と破壊的操作のオプトイン保護。</div>
+          </li>
+          <li class="fact-item">
+            <div class="fact-value">アプリ非依存</div>
+            <div class="fact-label">標準 restic リポジトリ形式（BSD-2-Clause）。公式 <code>restic</code> CLI だけでも復元可能。</div>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section-why" id="why">
+      <div class="container split">
+        <div class="section-header">
+          <h2>なぜ Git や手動スクリプトではなく Restic Tray を使うのか</h2>
+          <p>Git はコミット済みの履歴を管理する道具です。Restic Tray は作業中のフォルダ全体を暗号化スナップショットし、過去の任意の時点へ戻せる状態を維持します。</p>
+        </div>
+
+        <div class="why-list">
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+            <h3>Git はバックアップではない</h3>
+            <p>未コミットの編集、未追跡ファイル、stash、未 push ブランチ、Unity の大きなバイナリ素材はドライブ故障で失われます。Restic Tray は <code>.git</code> を含めフォルダ全体をスナップショットしつつ、<code>node_modules/</code> や <code>target/</code>、Unity の <code>Library/</code> など再生成できるキャッシュを既定で除外します。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <h3>送信前に暗号化、ロックインなし</h3>
+            <p>restic がすべてのデータとファイル名を PC 上で AES-256-CTR + Poly1305-AES で暗号化し、重複排除で差分チャンクだけを送ります。パスワードは PC の外に出ず、万一このアプリを使わなくなっても公式 <code>restic</code> コマンドだけで復元できます。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg></div>
+            <h3>エグレス無料の Cloudflare R2 に直接保存</h3>
+            <p>restic 標準の <code>s3:</code> バックエンドで Cloudflare R2 へ直接接続します。データ取り出しの帯域課金がないため、復元や定期的な読み戻し確認も気兼ねなく回せます。作者運営のサーバーやテレメトリ通信は一切ありません。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></svg></div>
+            <h3>WebView なしの低負荷常駐と MCP 連携</h3>
+            <p><code>eframe</code>/<code>egui</code> と <code>tray-icon</code> による純 Rust 構成。トレイ格納中は描画ループを止めて CPU 消費をほぼゼロに保ちながら、定期スケジューラ・未実施アラート・AI エージェント向け MCP ブリッジが稼働し続けます。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt section-features" id="features">
+      <div class="container">
+        <div class="section-header">
+          <h2>どのような機能と安全設計が標準で組み込まれているか</h2>
+          <p>DPAPI による秘密情報隔離、定期的な読み戻し検証、ローカル監査ログ、破壊的操作のオプトイン保護を初期状態で備えています。</p>
+        </div>
+
+        <div class="feature-grid">
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+            <h3>Windows DPAPI で秘密情報を隔離</h3>
+            <p>R2 の API キーと Restic パスワードは <code>config.json</code> へ一切書かず、DPAPI + 二次エントロピー + <code>Zeroize</code> で <code>config\credentials.dat</code> に分離保存。<code>restic.exe</code> には環境変数経由でのみ渡します。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+            <h3>自動読み戻し確認と未実施通知</h3>
+            <p>既定で 7 日ごとに保存データの 5% を実際に読み戻して検証し（<code>restic check --read-data-subset</code>）、異常時や 48 時間以上成功がない場合に Windows トースト通知で知らせます。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg></div>
+            <h3>22 ツール内蔵 MCP サーバー</h3>
+            <p>Claude Code や Cursor から <code>restic-tray.exe --mcp</code> を登録し、状態確認・テスト実行・差分確認・安全復元が可能。Prune・バケット削除・引き継ぎは既定で無効（オプトイン）です。</p>
+            <p class="card-meta"><a href="docs/mcp.html">全 22 ツールの仕様を見る<svg class="link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg></div>
+            <h3>Unity 対応の賢い除外ルール</h3>
+            <p>依存キャッシュ・目印ファイル（<code>CACHEDIR.TAG</code>、<code>SourceAssetDB</code>、<code>pyvenv.cfg</code>）・Unity プロジェクト直下の生成物を自動除外。<code>Assets/</code> や <code>Packages/</code> 内の同名フォルダは守り抜きます。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+            <h3>ローカル SQLite (WAL) 履歴と監査ログ</h3>
+            <p>バックアップごとの新規・変更件数、前回比の増減、保存量、Snapshot ID、所要時間と、GUI・トレイ・MCP からの操作監査ログを <code>r2_restic_history.db</code> に記録します。</p>
+          </div>
+          <div class="card">
+            <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg></div>
+            <h3>多段ガード付き R2 削除と複数 PC 引き継ぎ</h3>
+            <p>内蔵 S3 クライアントによるプレフィックス／バケット削除は Dry-Run 事前集計・バケット名手入力・1.5 秒長押しで誤操作を防止。実験的機能として複数 PC 引き継ぎも備えます。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-specs" id="specifications">
+      <div class="container split">
+        <div class="section-header">
+          <h2>基本仕様</h2>
+          <p>Restic Tray v1.0.0 は MIT ライセンス・無料で使える Windows x64 向けの純 Rust 製 Cloudflare R2 バックアップアプリです。</p>
+        </div>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="specs-table-ja-caption">
+  <table>
+    <caption id="specs-table-ja-caption">Restic Tray v1.0.0 基本仕様一覧</caption>
+    <thead>
+      <tr>
+        <th scope="col">項目</th>
+        <th scope="col">仕様</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">製品名</th>
+        <td data-label="仕様">Restic Tray（<code>restic-tray</code>）</td>
+      </tr>
+      <tr>
+        <th scope="row">対象バージョン・同梱 restic</th>
+        <td data-label="仕様">v1.0.0（SHA-256 検証済みの公式 <code>restic.exe</code> v0.20.0 を同梱）</td>
+      </tr>
+      <tr>
+        <th scope="row">ライセンス・価格</th>
+        <td data-label="仕様">MIT License・無料（$0 / オープンソース）</td>
+      </tr>
+      <tr>
+        <th scope="row">対応 OS</th>
+        <td data-label="仕様">Windows 10 / Windows 11 / Windows Server 2016 以降（x64・TLS 1.2 以降必須）</td>
+      </tr>
+      <tr>
+        <th scope="row">実行構成</th>
+        <td data-label="仕様">純 Rust（<code>eframe</code>/<code>egui</code> 0.37、<code>tray-icon</code> 0.26、SQLite WAL）。WebView やブラウザランタイム不要</td>
+      </tr>
+      <tr>
+        <th scope="row">保存先</th>
+        <td data-label="仕様">Cloudflare R2（<code>s3:https://&lt;accountId&gt;.r2.cloudflarestorage.com/&lt;bucket&gt;[/&lt;prefix&gt;]</code>・エグレス料金無料）</td>
+      </tr>
+      <tr>
+        <th scope="row">暗号化</th>
+        <td data-label="仕様">PC 上でのクライアント側暗号化（AES-256-CTR + Poly1305-AES MAC + <code>scrypt</code>、標準 restic 形式）</td>
+      </tr>
+      <tr>
+        <th scope="row">秘密情報の保存</th>
+        <td data-label="仕様">Windows DPAPI + 二次エントロピー + <code>Zeroize</code> で <code>config\credentials.dat</code> へ隔離保存</td>
+      </tr>
+      <tr>
+        <th scope="row">内蔵 MCP サーバー</th>
+        <td data-label="仕様">22 ツール（<code>--mcp</code> stdio JSON-RPC 2.0、ローカル名前付きパイプ相互認証、ヘッドレスフォールバック）</td>
+      </tr>
+      <tr>
+        <th scope="row">画面言語</th>
+        <td data-label="仕様">デスクトップ GUI・MCP ツール説明は日本語のみ（公式サイト・ドキュメントは日英両対応）</td>
+      </tr>
+      <tr>
+        <th scope="row">テレメトリ・ロックイン</th>
+        <td data-label="仕様">テレメトリなし・外部サーバーなし・公式 <code>restic</code> CLI 単体でいつでも復元可能</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+      </div>
+    </section>
+
+    <section class="section section-alt section-compare" id="compare">
+      <div class="container">
+        <div class="section-header">
+          <h2>restic CLI + タスクスケジューラとの違い</h2>
+          <p>スクリプト自作と保守を好む場合は <code>restic</code> CLI 単体で足ります。Restic Tray は DPAPI 認証情報隔離、Unity 対応の自動除外、定期読み戻し検証、未実施通知、内蔵 MCP サーバーを標準で提供します。</p>
+        </div>
+        <div class="table-wrapper table-compare" tabindex="0" role="region" aria-labelledby="compare-table-ja-caption">
+  <table>
+    <caption id="compare-table-ja-caption">Restic Tray と restic コマンド＋タスクスケジューラの比較</caption>
+    <thead>
+      <tr>
+        <th scope="col">項目</th>
+        <th scope="col">Restic Tray</th>
+        <th scope="col">restic コマンド + タスクスケジューラ</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">設定の方法</th>
+        <td data-label="Restic Tray">デスクトップ画面と <code>config.json</code></td>
+        <td data-label="restic コマンド + タスクスケジューラ">コマンド、環境変数、スクリプト</td>
+      </tr>
+      <tr>
+        <th scope="row">秘密情報の保存</th>
+        <td data-label="Restic Tray">Windows DPAPI（<code>credentials.dat</code>）+ <code>Zeroize</code></td>
+        <td data-label="restic コマンド + タスクスケジューラ">利用者が管理する</td>
+      </tr>
+      <tr>
+        <th scope="row">R2 の接続先</th>
+        <td data-label="Restic Tray">アカウント ID・バケット・プレフィックスから自動組み立て</td>
+        <td data-label="restic コマンド + タスクスケジューラ">URL と環境変数を手で書く</td>
+      </tr>
+      <tr>
+        <th scope="row">Unity を考えた除外</th>
+        <td data-label="Restic Tray">既定で組み込み（プロジェクト直下・目印ファイル）</td>
+        <td data-label="restic コマンド + タスクスケジューラ">自分で除外リストを書く</td>
+      </tr>
+      <tr>
+        <th scope="row">失敗・未実施の通知</th>
+        <td data-label="Restic Tray">Windows トースト通知（既定 48 時間）</td>
+        <td data-label="restic コマンド + タスクスケジューラ">自分で用意する</td>
+      </tr>
+      <tr>
+        <th scope="row">定期的な読み戻し確認</th>
+        <td data-label="Restic Tray">既定で 7 日ごとに 5% を自動検証</td>
+        <td data-label="restic コマンド + タスクスケジューラ">別にタスクを設定する</td>
+      </tr>
+      <tr>
+        <th scope="row">AI エージェント操作</th>
+        <td data-label="Restic Tray">22 ツール内蔵 MCP サーバー（<code>--mcp</code>）</td>
+        <td data-label="restic コマンド + タスクスケジューラ">なし</td>
+      </tr>
+      <tr>
+        <th scope="row">対応 OS と保存先</th>
+        <td data-label="Restic Tray">Windows 10 以降 x64 と Cloudflare R2 のみ</td>
+        <td data-label="restic コマンド + タスクスケジューラ">restic が対応するすべて</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+      </div>
+    </section>
+
+    <section class="section section-download" id="download">
+      <div class="container">
+        <div class="section-header">
+          <h2>v1.0.0（Windows x64）の入手と検証方法</h2>
+          <p>3 形式すべてに SHA-256 検証済みの公式 <code>restic.exe</code> v0.20.0 を同梱しています（Windows 10 / Windows Server 2016 以降および TLS 1.2 以降が必須）。</p>
+        </div>
+
+        <div class="download-grid">
+          <div class="download-card recommended">
+            <div><span class="badge">推奨</span></div>
+            <h3>NSIS インストーラ</h3>
+            <p class="pkg-file">Restic.Tray_1.0.0_x64-setup.exe</p>
+            <p><code>%LOCALAPPDATA%\Programs\Restic Tray</code> へユーザー単位で導入。常駐アプリや <code>--mcp</code> 起動中でも安全に上書き更新できます。</p>
+            <div class="btn-group download-actions">
+          <a class="btn btn-primary" href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>GitHub Releases から取得</span>
+          </a>
+          <a class="btn btn-secondary" href="docs/installation.html">
+            <span>導入・検証・自動起動ガイド</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+        </div>
+          </div>
+          <div class="download-card">
+            <div><span class="badge badge-neutral">Windows Installer</span></div>
+            <h3>MSI インストーラ</h3>
+            <p class="pkg-file">Restic.Tray_1.0.0_x64_ja-JP.msi</p>
+            <p>標準の Windows Installer 形式（ユーザー単位導入）で配布管理したい環境向け。</p>
+          </div>
+          <div class="download-card">
+            <div><span class="badge badge-neutral">展開してすぐ実行</span></div>
+            <h3>Portable ZIP</h3>
+            <p class="pkg-file">Restic.Tray_1.0.0_x64-portable.zip</p>
+            <p>任意のフォルダに展開し、同梱の <code>restic.exe</code> とともに <code>restic-tray.exe</code> を直接起動します。</p>
+          </div>
+        </div>
+
+        <div class="verify-grid">
+        <aside class="callout callout-warn" aria-label="初期リリースはコード署名なし（未署名）です">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><span>初期リリースはコード署名なし（未署名）です</span></div>
+  <p>初回起動時に Windows Defender SmartScreen の警告（「Windows によって PC が保護されました」）が出る場合があります。下のコマンドで <code>SHA256SUMS.txt</code> と GitHub Artifact Attestations を確認したうえで「詳細情報」&rarr;「実行」を選んでください。Windows 11 の Smart App Control が有効な環境では未署名バイナリがブロックされる場合があります。</p>
+</aside>
+
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="PowerShell のコードをコピー">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">コピー</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="インストーラの SHA-256 チェックサムとビルド来歴証明を検証する PowerShell コマンド" tabindex="0"><code># 1. 同じリリースの SHA256SUMS.txt とハッシュを照合する
+Get-FileHash -Algorithm SHA256 .\Restic.Tray_1.0.0_x64-setup.exe
+Get-Content .\SHA256SUMS.txt
+
+# 2. GitHub Artifact Attestation（ビルド来歴証明）を検証する（GitHub CLI `gh` が必要）
+gh attestation verify .\Restic.Tray_1.0.0_x64-setup.exe --repo nayuengin/restic-tray</code></pre>
+</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-alt section-guides" id="docs">
+      <div class="container split">
+        <div class="section-header">
+          <h2>ドキュメント一覧</h2>
+          <p>導入・チェックサム検証、Cloudflare R2 準備、日々の運用、MCP 統合、バックアップと復元、トラブルシューティングを網羅しています。</p>
+        </div>
+
+        <div class="guide-list">
+        <a class="doc-card" href="docs/installation.html">
+          <h3><span>導入と検証</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>配布物の入手、SHA-256 照合、来歴証明、自動起動</p>
+        </a>
+        <a class="doc-card" href="docs/setup.html">
+          <h3><span>初期設定と Cloudflare R2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>R2 バケットと最小権限トークンの作成、初期設定手順</p>
+        </a>
+        <a class="doc-card" href="docs/usage.html">
+          <h3><span>基本操作</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>フォルダ管理、除外設定、スケジュール、定期検証、履歴</p>
+        </a>
+        <a class="doc-card" href="docs/mcp.html">
+          <h3><span>MCP 統合</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>AI エージェント連携と全 22 ツールの仕様・安全設計</p>
+        </a>
+        <a class="doc-card" href="docs/backup-restore.html">
+          <h3><span>バックアップと復元</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>テスト実行、復元手順、新 PC 復旧、公式 CLI 復元</p>
+        </a>
+        <a class="doc-card" href="docs/troubleshooting.html">
+          <h3><span>トラブルシューティング</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>SmartScreen、DPAPI、R2 権限、ロック、除外の対処</p>
+        </a>
+        <a class="doc-card" href="docs/faq.html">
+          <h3><span>よくある質問・サポート方針</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+          <p>FAQ、対応範囲、プライバシー、免責事項</p>
+        </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-faq" aria-labelledby="home-faq-ja-heading">
+      <div class="container split">
+        <div class="section-header">
+          <h2 id="home-faq-ja-heading">よくある質問（Q&amp;A）</h2>
+          <p>暗号化・PC 紛失時の復旧・自動起動・Unity 除外・プライバシーに関する主な質問と回答です。<a href="docs/faq.html">全 10 問の FAQ とサポート方針を見る<svg class="link-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></a></p>
+        </div>
+
+        <div class="accordion">
+          <details>
+            <summary>Cloudflare はバックアップしたファイルの中身を読めますか？</summary>
+            <div class="accordion-body">
+              <p>読めません。ファイルの中身・ファイル名・メタデータはすべて送信前に PC 上で restic が AES-256-CTR + Poly1305-AES で暗号化し、パスワードは PC の外に出ません。</p>
+            </div>
+          </details>
+          <details>
+            <summary>PC をなくしたら復元できますか？ パスワードを忘れたらどうなりますか？</summary>
+            <div class="accordion-body">
+              <p><strong>リポジトリのパスワード</strong>を別の場所に控えてあれば新しい PC から復元できます（R2 の API トークンは Cloudflare ダッシュボードで再発行可能）。<code>credentials.dat</code> は元の PC のその Windows ユーザーでしか復号できないため、パスワードを失うと R2 上のバックアップは二度と復元できません。</p>
+            </div>
+          </details>
+          <details>
+            <summary>Windows を起動したら自動で動きますか？</summary>
+            <div class="accordion-body">
+              <p>現時点では自動登録されません。定期バックアップと未実施通知はアプリが動いている間だけ働くため、スタートアップフォルダ（<kbd>Win</kbd> + <kbd>R</kbd> &rarr; <code>shell:startup</code>）に <code>restic-tray.exe --minimized</code> のショートカットを置いてください（<a href="docs/installation.html#startup">自動起動の手順</a>）。</p>
+            </div>
+          </details>
+          <details>
+            <summary>Unity の <code>Library</code> フォルダがバックアップに入っていないのはなぜですか？</summary>
+            <div class="accordion-body">
+              <p>Unity プロジェクト直下の <code>Library</code>、<code>Temp</code>、<code>Logs</code>、<code>obj</code>、<code>Build</code>、<code>Builds</code>、<code>Assets\SerializedUdonPrograms</code> は再生成できるキャッシュのため、容量と転送時間を節約する目的で既定で除外しています（<code>useBasicExcludes: true</code>）。<code>Assets</code> や <code>Packages</code> 内の同名フォルダは除外されません。</p>
+            </div>
+          </details>
+          <details>
+            <summary>自分の R2 バケット以外にデータを送信しますか？</summary>
+            <div class="accordion-body">
+              <p>送信しません。作者運営のサーバー、テレメトリ、自動更新確認の通信はいずれもありません。新リリースの通知は GitHub リポジトリの <strong>Watch &rarr; Custom &rarr; Releases</strong> をご利用ください。</p>
+            </div>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="./">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="docs/installation.html">導入と検証</a></li>
+            <li><a href="docs/setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="docs/mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="docs/backup-restore.html">バックアップと復元</a></li>
+            <li><a href="docs/faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>

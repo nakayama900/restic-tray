@@ -1,0 +1,164 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended",
+    "helpers:pinGitHubActionDigests"
+  ],
+  "ignorePresets": [
+    ":semanticPrefixFixDepsChoreOthers"
+  ],
+  "enabledManagers": [
+    "cargo",
+    "github-actions"
+  ],
+  "timezone": "Asia/Tokyo",
+  "schedule": [
+    "before 9am on monday"
+  ],
+  "dependencyDashboard": {
+    "enabled": true,
+    "labels": [
+      "PR: Dependencies",
+      "PR: CI/Build"
+    ]
+  },
+  "labels": [
+    "PR: Dependencies"
+  ],
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "semanticCommitScope": "deps",
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rebaseWhen": "automerging",
+  "minimumReleaseAge": "3 days",
+  "automerge": false,
+  "automergeType": "pr",
+  "platformAutomerge": true,
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": [
+      "before 9am on monday"
+    ],
+    "automerge": true
+  },
+  "vulnerabilityAlerts": {
+    "enabled": true,
+    "labels": [
+      "PR: Dependencies",
+      "Problem: Security"
+    ],
+    "schedule": [
+      "at any time"
+    ],
+    "prCreation": "immediate",
+    "prConcurrentLimit": 0,
+    "minimumReleaseAge": null,
+    "semanticCommitType": "fix",
+    "commitMessageSuffix": "[SECURITY]"
+  },
+  "packageRules": [
+    {
+      "description": "Group non-breaking Cargo minor and patch updates and automerge when required CI checks pass",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch"
+      ],
+      "matchIsBreaking": false,
+      "groupName": "Cargo non-breaking dependencies",
+      "groupSlug": "cargo-minor-patch",
+      "prPriority": 5,
+      "automerge": true
+    },
+    {
+      "description": "Group non-major GitHub Actions updates and automerge when required CI checks pass",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepTypes": [
+        "action"
+      ],
+      "matchUpdateTypes": [
+        "minor",
+        "patch",
+        "digest",
+        "pin",
+        "pinDigest"
+      ],
+      "matchIsBreaking": false,
+      "groupName": "GitHub Actions",
+      "groupSlug": "github-actions",
+      "semanticCommitScope": "ci",
+      "prPriority": 5,
+      "automerge": true
+    },
+    {
+      "description": "Keep GitHub Actions runtime inputs (e.g. python-version) individual and never automerge",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchDepTypes": [
+        "uses-with"
+      ],
+      "groupName": null,
+      "semanticCommitScope": "ci",
+      "prPriority": -5,
+      "automerge": false
+    },
+    {
+      "description": "Keep major GitHub Actions updates individual and never automerge",
+      "matchManagers": [
+        "github-actions"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": null,
+      "semanticCommitScope": "ci",
+      "prPriority": -5,
+      "automerge": false
+    },
+    {
+      "description": "Never group or automerge major updates",
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "groupName": null,
+      "prPriority": -5,
+      "automerge": false
+    },
+    {
+      "description": "Never group or automerge breaking updates (including Cargo 0.x minor and 0.0.x patch)",
+      "matchIsBreaking": true,
+      "groupName": null,
+      "prPriority": -5,
+      "automerge": false
+    },
+    {
+      "description": "Defense in depth: never group or automerge Cargo 0.x minor updates",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchCurrentVersion": "/^0\\./",
+      "matchUpdateTypes": [
+        "minor"
+      ],
+      "groupName": null,
+      "prPriority": -5,
+      "automerge": false
+    },
+    {
+      "description": "Defense in depth: never group or automerge Cargo 0.0.x updates",
+      "matchManagers": [
+        "cargo"
+      ],
+      "matchCurrentVersion": "/^0\\.0\\./",
+      "groupName": null,
+      "prPriority": -5,
+      "automerge": false
+    }
+  ]
+}

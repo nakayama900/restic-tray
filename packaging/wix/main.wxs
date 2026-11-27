@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <?define Publisher = "nayuengin" ?>
+  <?define AppIdentifier = "io.github.nayuengin.restic-tray" ?>
+  <Product
+    Id="*"
+    Name="Restic Tray"
+    Language="1041"
+    Codepage="932"
+    Version="$(var.Version)"
+    Manufacturer="$(var.Publisher)"
+    UpgradeCode="39D7E21F-82B1-4F3A-9C84-6E2F904D8C12">
+
+    <Package
+      InstallerVersion="450"
+      Compressed="yes"
+      InstallScope="perUser"
+      Platform="x64"
+      Description="Restic Tray // Periodic Restic Backup for Cloudflare R2 &amp; MCP Server"
+      Comments="Pure-Rust periodic backup Windows system tray app using Restic for Cloudflare R2 with MCP server" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Icon Id="AppIcon.ico" SourceFile="$(var.IconPath)" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/nayuengin/restic-tray" />
+    <Property Id="MSIFASTINSTALL" Value="7" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="LocalAppDataFolder">
+        <Directory Id="ProgramsFolder" Name="Programs">
+          <Directory Id="INSTALLFOLDER" Name="Restic Tray" />
+        </Directory>
+      </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Restic Tray" />
+      </Directory>
+    </Directory>
+
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="C47E9810-31D4-478A-B102-98431D7F6B21" Win64="yes">
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\$(var.Publisher)\Restic Tray"
+          Name="InstallLocation"
+          Type="string"
+          Value="[INSTALLFOLDER]"
+          KeyPath="yes" />
+        <!-- Gives the app's notifications its name. -->
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\Classes\AppUserModelId\$(var.AppIdentifier)"
+          Name="DisplayName"
+          Type="string"
+          Value="Restic Tray" />
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RemoveFolder Id="RemoveProgramsFolder" Directory="ProgramsFolder" On="uninstall" />
+        <File Id="ResticTrayExe" Source="$(var.BinPath)" />
+        <File Id="ResticSidecarExe" Source="$(var.ResticPath)" />
+        <File Id="LicenseFile" Source="$(var.LicensePath)" />
+        <File Id="NoticesFile" Source="$(var.NoticesPath)" />
+        <File Id="ReadmeFile" Source="$(var.ReadmePath)" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="F8120B3E-71C9-42D1-8F23-1904C852D149" Win64="yes">
+        <Shortcut
+          Id="ApplicationStartMenuShortcut"
+          Name="Restic Tray"
+          Description="Restic Tray // Periodic Restic Backup for Cloudflare R2 &amp; MCP Server"
+          Target="[INSTALLFOLDER]restic-tray.exe"
+          WorkingDirectory="INSTALLFOLDER"
+          Icon="AppIcon.ico" />
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue
+          Root="HKCU"
+          Key="Software\$(var.Publisher)\Restic Tray"
+          Name="StartMenuShortcut"
+          Type="integer"
+          Value="1"
+          KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="Restic Tray" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+  </Product>
+</Wix>

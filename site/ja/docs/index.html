@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>ドキュメント | Restic Tray</title>
+  <meta name="description" content="Restic Tray v1.0.0 の公式ドキュメント。導入・チェックサム照合、Cloudflare R2 初期設定、基本操作、22 ツール MCP 統合、復元手順、トラブルシューティング、FAQ を掲載。">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/ja/docs/">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="ドキュメント | Restic Tray">
+  <meta property="og:description" content="Restic Tray v1.0.0 の公式ドキュメント。導入・チェックサム照合、Cloudflare R2 初期設定、基本操作、22 ツール MCP 統合、復元手順、トラブルシューティング、FAQ を掲載。">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/ja/docs/">
+  <meta property="og:locale" content="ja_JP">
+  <meta property="og:locale:alternate" content="en_US">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="ドキュメント | Restic Tray">
+  <meta name="twitter:description" content="Restic Tray v1.0.0 の公式ドキュメント。導入・チェックサム照合、Cloudflare R2 初期設定、基本操作、22 ツール MCP 統合、復元手順、トラブルシューティング、FAQ を掲載。">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Cloudflare R2 と Restic による Windows 向け暗号化バックアップアプリ">
+  <link rel="icon" href="../../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。","url":"https://nayuengin.github.io/restic-tray/ja/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/ja/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"JPY"},"featureList":["Cloudflare R2 (S3 互換) への Restic クライアント側暗号化バックアップ (AES-256-CTR + Poly1305-AES)","Windows DPAPI + 二次エントロピー + Zeroize による秘密情報の分離保存 (credentials.dat)","単一バイナリ内蔵の 22 ツール MCP サーバー (--mcp) と名前付きパイプ相互認証","Unity プロジェクト直下キャッシュを含む組み込み除外パターンと excludeIfPresent","定期復元確認 (7 日ごとに 5%) と未実施 Windows トースト通知 (既定 48 時間)","標準 restic リポジトリ形式による公式 restic CLI 単体復元 (ロックインなし)"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"ホーム","item":"https://nayuengin.github.io/restic-tray/ja/"},{"@type":"ListItem","position":2,"name":"ドキュメント","item":"https://nayuengin.github.io/restic-tray/ja/docs/"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Restic Tray ドキュメント","inLanguage":"ja","url":"https://nayuengin.github.io/restic-tray/ja/docs/","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">本文へ移動</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="メイン">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>メニュー</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">ホーム</a></li>
+          <li><a href="./" aria-current="page">ドキュメント</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">ダウンロード</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../../docs/" hreflang="en" lang="en">English</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">ダークテーマに切り替え</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">ライトテーマに切り替え</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>ドキュメント一覧: ドキュメント概要</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="ドキュメント一覧">
+          <ul class="docs-nav-list">
+          <li><a href="./" aria-current="page">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="ドキュメント">
+        <p class="docs-nav-heading">ドキュメント</p>
+        <nav aria-label="ドキュメント">
+          <ul class="docs-nav-list">
+          <li><a href="./" aria-current="page">ドキュメント概要</a></li>
+          <li><a href="installation.html">導入と検証</a></li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a></li>
+          <li><a href="usage.html">基本操作</a></li>
+          <li><a href="mcp.html">MCP 統合</a></li>
+          <li><a href="backup-restore.html">バックアップと復元</a></li>
+          <li><a href="troubleshooting.html">トラブルシューティング</a></li>
+          <li><a href="faq.html">よくある質問・サポート方針</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="パンくずリスト">
+          <ol>
+          <li><a href="../">ホーム</a></li>
+          <li aria-current="page">ドキュメント</li>
+          </ol>
+        </nav>
+
+        <h1>Restic Tray ドキュメント</h1>
+        <p class="doc-lead">Windows への導入、Cloudflare R2 の初期設定、日々の運用、MCP 連携、バックアップと復元、トラブルシューティングまでを網羅した公式ガイドです。</p>
+
+        <aside class="callout" aria-label="はじめに確認しておく前提">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>はじめに確認しておく前提</span></div>
+  <ul><li><strong>対応環境</strong>: Windows 10 / Windows Server 2016 以降（x64）および TLS 1.2 以降。</li><li><strong>保存先</strong>: Cloudflare R2（restic 標準の S3 互換バックエンド）。</li><li><strong>画面言語</strong>: デスクトップ GUI および内蔵 MCP ツールの説明文は日本語対応です。</li><li><strong>非公式ソフトウェア</strong>: MIT ライセンスの独立 OSS であり、restic および Cloudflare とは関係ありません。</li></ul>
+</aside>
+
+        <h2 id="guides">ガイド一覧</h2>
+        <div class="card-grid">
+          <a class="doc-card" href="installation.html">
+            <h3><span>導入と検証</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>配布物の入手、SHA-256 照合、来歴証明、自動起動</p>
+          </a>
+          <a class="doc-card" href="setup.html">
+            <h3><span>初期設定と Cloudflare R2</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>R2 バケットと最小権限トークンの作成、初期設定手順</p>
+          </a>
+          <a class="doc-card" href="usage.html">
+            <h3><span>基本操作</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>フォルダ管理、除外設定、スケジュール、定期検証、履歴</p>
+          </a>
+          <a class="doc-card" href="mcp.html">
+            <h3><span>MCP 統合</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>AI エージェント連携と全 22 ツールの仕様・安全設計</p>
+          </a>
+          <a class="doc-card" href="backup-restore.html">
+            <h3><span>バックアップと復元</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>テスト実行、復元手順、新 PC 復旧、公式 CLI 復元</p>
+          </a>
+          <a class="doc-card" href="troubleshooting.html">
+            <h3><span>トラブルシューティング</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>SmartScreen、DPAPI、R2 権限、ロック、除外の対処</p>
+          </a>
+          <a class="doc-card" href="faq.html">
+            <h3><span>よくある質問・サポート方針</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></h3>
+            <p>FAQ、対応範囲、プライバシー、免責事項</p>
+          </a>
+        </div>
+
+        <h2 id="recommended-path">おすすめの読む順番</h2>
+        <ol>
+          <li><a href="installation.html">導入と検証</a> — v1.0.0 の入手、<code>SHA256SUMS.txt</code> とビルド来歴証明の確認、Windows サインイン時の自動起動設定。</li>
+          <li><a href="setup.html">初期設定と Cloudflare R2</a> — バケットと最小権限 API トークンの作成、DPAPI 認証情報の保存、リポジトリ初期化。</li>
+          <li><a href="usage.html">基本操作</a> — 対象フォルダの追加、Unity 対応の基本除外、スケジュール、定期復元確認、履歴の見方。</li>
+          <li><a href="backup-restore.html">バックアップと復元</a> — テスト実行から本番バックアップ、別フォルダへの復元、新 PC 復旧、公式 CLI 復元。</li>
+          <li><a href="mcp.html">MCP 統合</a> — Claude Code や Cursor から 22 個の MCP ツールを安全に扱う手順。</li>
+        </ol>
+
+        <h2 id="source-docs">リポジトリ内の技術文書</h2>
+        <ul>
+          <li><a href="https://github.com/nayuengin/restic-tray/blob/main/docs/CLOUDFLARE_R2_SETUP.md" rel="noopener noreferrer">docs/CLOUDFLARE_R2_SETUP.md</a> — Cloudflare R2 バケット・API トークン準備手順</li>
+          <li><a href="https://github.com/nayuengin/restic-tray/blob/main/docs/ARCHITECTURE.md" rel="noopener noreferrer">docs/ARCHITECTURE.md</a> — モジュール構成・DPAPI 設計・MCP 信頼境界・複数 PC 引き継ぎ設計</li>
+          <li><a href="https://github.com/nayuengin/restic-tray/blob/main/docs/AGENT.md" rel="noopener noreferrer">docs/AGENT.md</a> — 全 22 個の MCP ツール詳細仕様</li>
+          <li><a href="https://github.com/nayuengin/restic-tray/blob/main/SECURITY.md" rel="noopener noreferrer">SECURITY.md</a> — セキュリティ方針・対象範囲・脆弱性の非公開報告</li>
+          <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">CHANGELOG.md</a> — リリース履歴と移行手順</li>
+        </ul>
+
+      <nav class="doc-pager" aria-label="ページ移動">
+        <a class="pager-link next" href="installation.html">
+          <span class="pager-dir">次へ<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">導入と検証</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="このページの内容">
+        <p class="docs-toc-title">このページの内容</p>
+        <ul>
+          <li><a href="#guides">ガイド一覧</a></li>
+          <li><a href="#recommended-path">おすすめの読む順番</a></li>
+          <li><a href="#source-docs">リポジトリ内技術文書</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Cloudflare R2 と Restic を用いて暗号化バックアップを定期実行する、MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。</p>
+        </div>
+        <div class="footer-col">
+          <h2>ドキュメント</h2>
+          <ul>
+            <li><a href="installation.html">導入と検証</a></li>
+            <li><a href="setup.html">Cloudflare R2 初期設定</a></li>
+            <li><a href="mcp.html">MCP 統合（22 ツール）</a></li>
+            <li><a href="backup-restore.html">バックアップと復元</a></li>
+            <li><a href="faq.html">よくある質問</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>プロジェクト</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">変更履歴 (CHANGELOG)</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues / 相談</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">脆弱性の非公開報告</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Restic Tray は独立した非公式 OSS であり、restic および Cloudflare とは関係ありません。</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../../assets/js/site.js"></script>
+</body>
+</html>

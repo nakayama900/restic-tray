@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>FAQ &amp; Support Policy | Restic Tray Docs</title>
+  <meta name="description" content="Frequently asked questions and support policy for Restic Tray: encryption, lost PC recovery, Windows startup, Unity excludes, SmartScreen, telemetry, and warranty disclaimer.">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/faq.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="FAQ &amp; Support Policy | Restic Tray Docs">
+  <meta property="og:description" content="Frequently asked questions and support policy for Restic Tray: encryption, lost PC recovery, Windows startup, Unity excludes, SmartScreen, telemetry, and warranty disclaimer.">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/docs/faq.html">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FAQ &amp; Support Policy | Restic Tray Docs">
+  <meta name="twitter:description" content="Frequently asked questions and support policy for Restic Tray: encryption, lost PC recovery, Windows startup, Unity excludes, SmartScreen, telemetry, and warranty disclaimer.">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.","url":"https://nayuengin.github.io/restic-tray/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Client-side encrypted Restic backups (AES-256-CTR + Poly1305-AES) to Cloudflare R2","Windows DPAPI + secondary entropy + Zeroize credential isolation (credentials.dat)","Single-binary built-in 22-tool MCP server (--mcp) with Named Pipe mutual authentication","Built-in cache and Unity project-root excludes plus excludeIfPresent marker support","Automated periodic restore checks (5% every 7 days) and Windows overdue toast alerts (48h default)","Standard restic repository format recoverable anytime with the standalone restic CLI"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://nayuengin.github.io/restic-tray/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://nayuengin.github.io/restic-tray/docs/"},{"@type":"ListItem","position":3,"name":"FAQ & Support Policy","item":"https://nayuengin.github.io/restic-tray/docs/faq.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"FAQ & Support Policy","inLanguage":"en","url":"https://nayuengin.github.io/restic-tray/docs/faq.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does Restic Tray start automatically when I sign in to Windows?","acceptedAnswer":{"@type":"Answer","text":"Not automatically yet. Place a shortcut to restic-tray.exe --minimized in your Windows Startup folder (Win + R -> shell:startup)."}},{"@type":"Question","name":"Can I restore my data if I lose my PC? What if I forget the repository password?","acceptedAnswer":{"@type":"Answer","text":"Yes, if you stored your Restic repository password outside the PC. credentials.dat is DPAPI-encrypted to the original PC and Windows user, so losing the repository password makes R2 backups permanently unrecoverable."}},{"@type":"Question","name":"Can Cloudflare read my backed-up files?","acceptedAnswer":{"@type":"Answer","text":"No. Restic encrypts all file contents, filenames, and metadata on your PC before upload, and your repository password never leaves your machine."}},{"@type":"Question","name":"Why is Unity's Library folder not included in my backups?","acceptedAnswer":{"@type":"Answer","text":"Unity's Library, Temp, Logs, obj, Build, Builds, and Assets\\SerializedUdonPrograms directly under a Unity project root are excluded by default when useBasicExcludes is enabled. Folders inside Assets or Packages are still backed up."}},{"@type":"Question","name":"Can I back up Git repositories too?","acceptedAnswer":{"@type":"Answer","text":"Yes. Restic Tray backs up the entire folder including .git (skipping only temporary pack files), preserving uncommitted work. Multi-PC projectKey handoff is not supported for .git folders."}},{"@type":"Question","name":"How much does Cloudflare R2 cost?","acceptedAnswer":{"@type":"Answer","text":"See Cloudflare R2 Pricing for current storage, operation, and free-tier terms. R2 charges zero egress fees, and Restic deduplication keeps stored volume low."}},{"@type":"Question","name":"Why does Windows SmartScreen warn when I run the installer?","acceptedAnswer":{"@type":"Answer","text":"Initial releases are distributed unsigned. Verify SHA256SUMS.txt and gh attestation verify before running."}},{"@type":"Question","name":"Will Restic Tray support other cloud storage providers, macOS/Linux, or an English UI?","acceptedAnswer":{"@type":"Answer","text":"The current project scope is Windows 10+ x64 (TLS 1.2+), Cloudflare R2, and a Japanese UI. Out-of-scope ideas are welcome in GitHub Issues without an implementation commitment."}},{"@type":"Question","name":"Does Restic Tray send data anywhere other than my Cloudflare R2 bucket?","acceptedAnswer":{"@type":"Answer","text":"No. There is no author-operated server, no analytics or telemetry, and no update-check network traffic."}},{"@type":"Question","name":"How do I get notified about new releases?","acceptedAnswer":{"@type":"Answer","text":"Click Watch -> Custom -> Releases on the nayuengin/restic-tray GitHub repository."}}]}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">Home</a></li>
+          <li><a href="./" aria-current="page">Docs</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">Download</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../ja/docs/faq.html" hreflang="ja" lang="ja">日本語</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">Switch to dark theme</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">Switch to light theme</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>Documentation menu: FAQ &amp; Support Policy</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="Documentation menu">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html" aria-current="page">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="Documentation">
+        <p class="docs-nav-heading">Documentation</p>
+        <nav aria-label="Documentation">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html" aria-current="page">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li aria-current="page">FAQ &amp; Support Policy</li>
+          </ol>
+        </nav>
+
+        <h1>FAQ &amp; Support Policy</h1>
+        <p class="doc-lead">Answers to common questions about encryption, recovery, Windows startup, Unity excludes, Cloudflare R2 pricing, privacy, and support scope.</p>
+
+        <section class="accordion" aria-labelledby="faq-list-heading">
+          <h2 id="faq-list-heading">Frequently Asked Questions</h2>
+          <details>
+            <summary>Does Restic Tray start automatically when I sign in to Windows?</summary>
+            <div class="accordion-body"><p>Not automatically yet. Because scheduled backups and overdue notifications only run while Restic Tray is running, place a shortcut to <code>restic-tray.exe --minimized</code> in your Startup folder (<kbd>Win</kbd> + <kbd>R</kbd> &rarr; <code>shell:startup</code>). See <a href="installation.html#startup">Start automatically on Windows sign-in</a>.</p></div>
+          </details>
+          <details>
+            <summary>Can I restore my data if I lose my PC? What if I forget the repository password?</summary>
+            <div class="accordion-body"><p>Yes, as long as you kept a copy of your <strong>Restic repository password</strong> outside the PC (you can always issue a new Cloudflare R2 API token). Because <code>credentials.dat</code> is encrypted with Windows DPAPI tied to the original PC and Windows user, it cannot be decrypted elsewhere — if the repository password is lost, the encrypted data in R2 cannot be recovered.</p></div>
+          </details>
+          <details>
+            <summary>Can Cloudflare read my backed-up files?</summary>
+            <div class="accordion-body"><p>No. Restic encrypts all file contents, filenames, and metadata on your PC using AES-256-CTR with Poly1305-AES authentication before uploading to R2, and your repository password never leaves your machine.</p></div>
+          </details>
+          <details>
+            <summary>Why is Unity&#x27;s Library folder not included in my backups?</summary>
+            <div class="accordion-body"><p>Unity&rsquo;s <code>Library</code>, <code>Temp</code>, <code>Logs</code>, <code>obj</code>, <code>Build</code>, <code>Builds</code>, and <code>Assets\SerializedUdonPrograms</code> directly under a Unity project root are regenerable caches/outputs and are excluded by default (<code>useBasicExcludes: true</code>) to save storage space and upload time. Identically named folders inside <code>Assets</code> or <code>Packages</code> are still backed up. Turn off <strong>基本の除外パターンを有効にする</strong> on the <strong>フォルダ</strong> page if you want generated folders backed up too.</p></div>
+          </details>
+          <details>
+            <summary>Can I back up Git repositories too?</summary>
+            <div class="accordion-body"><p>Yes. Restic Tray backs up the entire folder including <code>.git</code> (excluding only Git&rsquo;s temporary <code>.git/objects/pack/tmp_pack_*</code> files), preserving uncommitted changes, stashes, and unpushed commits. However, <code>.git</code> folders cannot be assigned a multi-PC <code>projectKey</code> — use Git itself to sync code across machines.</p></div>
+          </details>
+          <details>
+            <summary>How much does Cloudflare R2 cost?</summary>
+            <div class="accordion-body"><p>See <a href="https://developers.cloudflare.com/r2/pricing/" rel="noopener noreferrer">Cloudflare R2 Pricing</a> for current storage, operation, and free-tier terms. R2 charges zero egress fees, and Restic&rsquo;s chunk deduplication combined with Restic Tray&rsquo;s default cache excludes helps keep stored volume low. Note that Cloudflare requires a payment method on file to enable R2 even within the free tier.</p></div>
+          </details>
+          <details>
+            <summary>Why does Windows SmartScreen warn when I run the installer?</summary>
+            <div class="accordion-body"><p>Initial releases are distributed unsigned, so Windows Defender SmartScreen may warn on first launch. Verify <code>SHA256SUMS.txt</code> and <code>gh attestation verify</code> as described in <a href="installation.html#verify">Verify Checksums &amp; Build Provenance</a> before running.</p></div>
+          </details>
+          <details>
+            <summary>Will Restic Tray support other cloud storage providers, macOS/Linux, or an English UI?</summary>
+            <div class="accordion-body"><p>The current project scope is Windows 10 / Windows Server 2016 or later (x64, TLS 1.2+), Cloudflare R2, and a Japanese desktop UI. Feature requests outside this scope are welcome in GitHub Issues for discussion, without a commitment to implement them.</p></div>
+          </details>
+          <details>
+            <summary>Does Restic Tray send data anywhere other than my Cloudflare R2 bucket?</summary>
+            <div class="accordion-body"><p>No. There is no author-operated server, no analytics or telemetry, and no automatic update check network traffic.</p></div>
+          </details>
+          <details>
+            <summary>How do I get notified about new releases?</summary>
+            <div class="accordion-body"><p>Restic Tray has no built-in update checker. To receive release alerts, click <strong>Watch &rarr; Custom &rarr; Releases</strong> at the top of the <a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">nayuengin/restic-tray</a> GitHub repository.</p></div>
+          </details>
+        </section>
+
+        <h2 id="support-policy">Support Policy &amp; Disclaimer</h2>
+        <ul>
+          <li><strong>Supported versions</strong>: Only the <strong>latest release</strong> receives bug fixes and security updates. Older versions are not backported.</li>
+          <li><strong>No SLA</strong>: Maintained on a best-effort basis by the owner (<code>@nayuengin</code>) with AI-assisted maintenance and no guaranteed response timelines.</li>
+          <li><strong>Semantic Versioning</strong>: Follows <a href="https://semver.org/" rel="noopener noreferrer">SemVer</a>; breaking changes occur only in major versions and include migration notes in <a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">CHANGELOG.md</a>.</li>
+          <li><strong>Project scope</strong>: Windows 10 / Windows Server 2016 or later (x64, TLS 1.2+), Cloudflare R2, and Japanese desktop UI.</li>
+          <li><strong>Backup responsibility</strong>: In addition to the <a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE" rel="noopener noreferrer">MIT License</a> warranty disclaimer, <strong>Restic Tray does not guarantee the integrity or recoverability of your backups</strong>. Always test restoring your data periodically using both the built-in restore verification and manual test restores.</li>
+          <li><strong>Security reporting</strong>: Report vulnerabilities privately via <a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">GitHub Private Vulnerability Reporting</a> rather than public issues.</li>
+        </ul>
+
+      <nav class="doc-pager" aria-label="Pagination">
+        <a class="pager-link prev" href="troubleshooting.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Previous</span>
+          <span class="pager-title">Troubleshooting</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="docs-toc-title">On this page</p>
+        <ul>
+          <li><a href="#faq-list-heading">Frequently Asked Questions</a></li>
+          <li><a href="#support-policy">Support Policy &amp; Disclaimer</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.</p>
+        </div>
+        <div class="footer-col">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="installation.html">Installation &amp; Verification</a></li>
+            <li><a href="setup.html">Cloudflare R2 Setup</a></li>
+            <li><a href="mcp.html">MCP Integration (22 Tools)</a></li>
+            <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+            <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">Changelog</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Unofficial open-source project. Not affiliated with, endorsed by, or sponsored by restic or Cloudflare.</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>

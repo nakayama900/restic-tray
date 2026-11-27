@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security Vulnerability (Private Report)
+    url: https://github.com/nayuengin/restic-tray/security/advisories/new
+    about: Report a security issue privately via GitHub Private Vulnerability Reporting.
+  - name: Architecture & Trust Boundaries
+    url: https://github.com/nayuengin/restic-tray/blob/main/docs/ARCHITECTURE.md
+    about: Review module architecture, DPAPI storage, Named Pipe MCP boundary, and restore safety.
+  - name: MCP Tool Reference (22 tools)
+    url: https://github.com/nayuengin/restic-tray/blob/main/docs/AGENT.md
+    about: Check the complete MCP tool specification and safety defaults before filing a question.

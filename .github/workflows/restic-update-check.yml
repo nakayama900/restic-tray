@@ -1,0 +1,207 @@
+name: Restic Update Check
+
+on:
+  schedule:
+    # Weekly on Monday at 03:17 UTC (12:17 JST)
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: restic-update-check
+  cancel-in-progress: false
+
+jobs:
+  check-restic-release:
+    name: Check upstream restic release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout scripts
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: scripts
+          persist-credentials: false
+
+      - name: Compare pinned restic version against upstream latest release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import re
+          import subprocess
+          import sys
+
+          MARKER = "<!-- restic-update-check -->"
+          SEMVER_RE = re.compile(r"^v?(?P<major>\d+)\.(?P<minor>\d+)\.(?P<patch>\d+)$")
+
+
+          def parse_semver(version: str) -> tuple[int, int, int]:
+              match = SEMVER_RE.fullmatch(version.strip())
+              if not match:
+                  raise ValueError(f"Expected X.Y.Z semver, got {version!r}")
+              return (
+                  int(match.group("major")),
+                  int(match.group("minor")),
+                  int(match.group("patch")),
+              )
+
+
+          def read_pinned_version(script_path: pathlib.Path) -> str:
+              text = script_path.read_text(encoding="utf-8")
+              match = re.search(r'\[string\]\$Version\s*=\s*"([^"]+)"', text)
+              if not match:
+                  raise RuntimeError(f"Could not find pinned $Version in {script_path}")
+              pinned = match.group(1).strip()
+              parse_semver(pinned)
+              return pinned
+
+
+          def run_gh(args: list[str]) -> str:
+              result = subprocess.run(
+                  ["gh", *args],
+                  check=True,
+                  text=True,
+                  capture_output=True,
+              )
+              return result.stdout
+
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          pinned_ver = read_pinned_version(pathlib.Path("scripts/download-restic.ps1"))
+          pinned_tuple = parse_semver(pinned_ver)
+
+          release = json.loads(run_gh(["api", "repos/restic/restic/releases/latest"]))
+          tag_name = str(release.get("tag_name") or "").strip()
+          if not re.fullmatch(r"v\d+\.\d+\.\d+", tag_name):
+              raise RuntimeError(f"Unexpected upstream release tag: {tag_name!r}")
+
+          latest_ver = tag_name.lstrip("v")
+          latest_tuple = parse_semver(latest_ver)
+
+          published_at = str(release.get("published_at") or "").strip()
+          if not re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z", published_at):
+              published_at = "unknown"
+
+          print(f"Pinned restic:   v{pinned_ver}")
+          print(f"Upstream latest: v{latest_ver} (published {published_at})")
+
+          if latest_tuple <= pinned_tuple:
+              print("Bundled restic version is up to date.")
+              sys.exit(0)
+
+          release_url = f"https://github.com/restic/restic/releases/tag/v{latest_ver}"
+          sums_url = f"https://github.com/restic/restic/releases/download/v{latest_ver}/SHA256SUMS"
+          expected_title = f"Update bundled restic.exe to v{latest_ver} (currently v{pinned_ver})"
+          body = "\n".join(
+              [
+                  MARKER,
+                  "A newer stable upstream release of `restic` is available.",
+                  "",
+                  "| Field | Value |",
+                  "| :--- | :--- |",
+                  f"| Pinned version (`scripts/download-restic.ps1`) | `v{pinned_ver}` |",
+                  f"| Latest upstream release | [`v{latest_ver}`]({release_url}) |",
+                  f"| Published at (UTC) | `{published_at}` |",
+                  f"| Upstream checksums | [`SHA256SUMS`]({sums_url}) |",
+                  "",
+                  "### Update checklist",
+                  "",
+                  "- [ ] Review upstream release notes for security fixes, breaking changes, and OS/TLS requirements.",
+                  f"- [ ] Update `$Version` and pinned `ZipSha256` / `ExeSha256` in `scripts/download-restic.ps1` to `v{latest_ver}`.",
+                  "- [ ] Run `pwsh -NoProfile -File scripts/download-restic.ps1` and `pwsh -NoProfile -File scripts/verify.ps1 -RequireAll` (including real-Restic E2E).",
+                  "- [ ] Regenerate `THIRD_PARTY_NOTICES.md` (`python scripts/generate-third-party-notices.py`) and update `README.md`, `README.ja.md`, and `CHANGELOG.md`.",
+                  "- [ ] Run installer build & Windows Sandbox smoke test (`scripts/release.ps1 build` and `scripts/release.ps1 smoke`).",
+                  "",
+                  "_Opened/updated automatically by `.github/workflows/restic-update-check.yml`._",
+              ]
+          )
+
+          existing_issues = json.loads(
+              run_gh(
+                  [
+                      "issue",
+                      "list",
+                      "--repo",
+                      repo,
+                      "--state",
+                      "open",
+                      "--label",
+                      "PR: Dependencies",
+                      "--label",
+                      "Scope: Restic",
+                      "--limit",
+                      "50",
+                      "--json",
+                      "number,title,body",
+                  ]
+              )
+          )
+          tracked = next(
+              (issue for issue in existing_issues if MARKER in (issue.get("body") or "")),
+              None,
+          )
+
+          if tracked is None:
+              created_url = run_gh(
+                  [
+                      "issue",
+                      "create",
+                      "--repo",
+                      repo,
+                      "--title",
+                      expected_title,
+                      "--label",
+                      "PR: Dependencies",
+                      "--label",
+                      "Scope: Restic",
+                      "--body",
+                      body,
+                  ]
+              ).strip()
+              print(f"Created tracking issue: {created_url}")
+              sys.exit(0)
+
+          issue_number = str(tracked["number"])
+          existing_body = (tracked.get("body") or "").replace("\r\n", "\n").strip()
+          if tracked.get("title") == expected_title and existing_body == body.strip():
+              print(f"Tracking issue #{issue_number} is already up to date for v{pinned_ver} -> v{latest_ver}.")
+              sys.exit(0)
+
+          run_gh(
+              [
+                  "issue",
+                  "edit",
+                  issue_number,
+                  "--repo",
+                  repo,
+                  "--title",
+                  expected_title,
+                  "--body",
+                  body,
+              ]
+          )
+          if tracked.get("title") != expected_title:
+              run_gh(
+                  [
+                      "issue",
+                      "comment",
+                      issue_number,
+                      "--repo",
+                      repo,
+                      "--body",
+                      f"Upstream `restic` latest release is now [`v{latest_ver}`]({release_url}) (pinned: `v{pinned_ver}`).",
+                  ]
+              )
+          print(f"Updated tracking issue #{issue_number} for v{pinned_ver} -> v{latest_ver}.")
+          PY

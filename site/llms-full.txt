@@ -1,0 +1,253 @@
+# Restic Tray — Complete Documentation Reference (`llms-full.txt`)
+
+> Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.
+> Cloudflare R2 と Restic を用いてクライアント側暗号化バックアップを定期実行する、22 ツール MCP サーバー内蔵の純 Rust 製 Windows タスクトレイ常駐アプリ。
+
+- Official Website (EN): https://nayuengin.github.io/restic-tray/
+- Official Website (JA): https://nayuengin.github.io/restic-tray/ja/
+- GitHub Repository: https://github.com/nayuengin/restic-tray
+- Latest Release: https://github.com/nayuengin/restic-tray/releases/latest
+
+---
+
+## 1. Technical Specifications
+
+| Specification | Value |
+| :--- | :--- |
+| Product name | Restic Tray (`restic-tray`) |
+| Target release | v1.0.0 |
+| License & price | MIT License, free ($0) |
+| Supported OS | Windows 10 / Windows 11 / Windows Server 2016 or later (x64, TLS 1.2+) |
+| Architecture | Pure Rust (`eframe`/`egui` 0.37, `tray-icon` 0.26, `rusqlite` WAL, Tokio Named Pipe); no WebView or browser runtime |
+| Bundled restic | Official `restic.exe` v0.20.0 (pinned, SHA-256 verified) |
+| Storage backend | Cloudflare R2 (`s3:https://<accountId>.r2.cloudflarestorage.com/<bucket>[/<prefix>]`, zero egress fees) |
+| Encryption | Client-side AES-256-CTR + Poly1305-AES MAC + `scrypt` key derivation via standard restic repository format |
+| Secret storage | Windows DPAPI (`CryptProtectData` + secondary entropy + `Zeroize`) in `config\credentials.dat`; injected into `restic.exe` only via environment variables |
+| Built-in MCP server | `restic-tray.exe --mcp` (22 tools over stdio JSON-RPC 2.0, local Named Pipe `reject_remote_clients(true)` + 256-bit mutual token, headless fallback) |
+| Desktop UI language | Japanese only (online site and docs are bilingual EN / JA) |
+| Telemetry & update checks | None (zero telemetry, no author-operated servers, no phone-home traffic) |
+| Vendor lock-in | None (standard restic repository recoverable anytime with standalone `restic` CLI) |
+| Affiliation | Unofficial independent OSS; not affiliated with restic or Cloudflare |
+
+---
+
+## 2. Why Restic Tray? (Comparison with restic CLI + Task Scheduler)
+
+| Aspect | Restic Tray | `restic` CLI + Windows Task Scheduler |
+| :--- | :--- | :--- |
+| Configuration | Desktop GUI and declarative `config.json` | CLI flags, environment variables, and scripts |
+| Secret storage | Windows DPAPI (`credentials.dat`) + `Zeroize` | User-managed |
+| Cloudflare R2 endpoint | Built automatically from Account ID, Bucket, and Prefix | Hand-written URL and environment variables |
+| Unity-aware excludes | Built in (project-root + `excludeIfPresent` markers) | Hand-written exclude lists |
+| Overdue & failure alerts | Windows toast notifications (default: 48 h) | User-scripted |
+| Periodic restore checks | Built in (default: 5% read-back every 7 days) | Separate scheduled task |
+| AI agent control | Built-in 22-tool MCP server (`--mcp`) | None |
+| OS & storage scope | Windows 10+ x64 and Cloudflare R2 only | Every OS and backend restic supports |
+
+Key design rationale:
+- **Git is not a backup**: Restic Tray backs up entire working directories — including uncommitted edits, untracked files, stashes, unpushed branches, `.git` (skipping only `.git/objects/pack/tmp_pack_*`), and large binary assets — while excluding regenerable caches by default.
+- **Zero-egress R2 + periodic verification**: Cloudflare R2 charges zero egress fees, making full restores and automated read-back checks (`restic check --read-data-subset`) predictable.
+- **Quiet tray resident**: Closing or minimizing hides the window to the Windows system tray and stops UI rendering so idle CPU stays near zero (installer smoke test verifies under 1 second of CPU time over 10 seconds in tray).
+
+---
+
+## 3. Installation & Verification
+
+Release bundles on https://github.com/nayuengin/restic-tray/releases/latest (all bundle official `restic.exe` v0.20.0):
+
+| Package | Filename | Notes |
+| :--- | :--- | :--- |
+| NSIS Installer (Recommended) | `Restic.Tray_1.0.0_x64-setup.exe` | Per-user install under `%LOCALAPPDATA%\Programs\Restic Tray`. Safely updates even while the tray app or `--mcp` is running. |
+| MSI Installer | `Restic.Tray_1.0.0_x64_ja-JP.msi` | Per-user Windows Installer package. |
+| Portable ZIP | `Restic.Tray_1.0.0_x64-portable.zip` | Extract anywhere and launch `restic-tray.exe`. |
+
+**Important**: Initial releases are unsigned. Windows Defender SmartScreen may warn on first launch (verify first, then select More info -> Run anyway), and Windows 11 Smart App Control may block unsigned binaries. Verify both `SHA256SUMS.txt` and GitHub Artifact Attestations before running:
+
+```powershell
+Get-FileHash -Algorithm SHA256 .\Restic.Tray_1.0.0_x64-setup.exe
+Get-Content .\SHA256SUMS.txt
+gh attestation verify .\Restic.Tray_1.0.0_x64-setup.exe --repo nayuengin/restic-tray
+```
+
+**Auto-start on Windows sign-in**: Restic Tray does not currently auto-register a Windows Startup entry. Scheduled backups and overdue alerts run only while the app is running. Press `Win + R` -> `shell:startup` and create a shortcut targeting:
+
+```text
+"%LOCALAPPDATA%\Programs\Restic Tray\restic-tray.exe" --minimized
+```
+
+**Release notifications**: There is no built-in update checker. Enable **Watch -> Custom -> Releases** on https://github.com/nayuengin/restic-tray.
+**Uninstall behavior**: Uninstalling does not delete `%LOCALAPPDATA%\io.github.nayuengin.restic-tray\` or Cloudflare R2 data.
+
+---
+
+## 4. Initial Setup & Cloudflare R2 Preparation
+
+1. **Create bucket**: In Cloudflare Dashboard -> R2 Object Storage -> Overview -> Create bucket (3-63 chars lowercase `a-z`, `0-9`, `-`; no leading/trailing hyphen; e.g. `my-restic-backups`). Note: Cloudflare requires a payment method on file to enable R2 even within the free tier.
+2. **Copy Account ID**: 32-character hex Account ID from R2 Overview -> Account Details (or dashboard URL).
+3. **Issue API token**: R2 Overview -> Account Details -> API Tokens -> Manage -> Account API tokens (recommended) -> Create Account API token.
+   - **Recommended permission (least privilege)**: **Object Read & Write** scoped to **Apply to specific buckets only** (select your backup bucket). Supports backups, listing, restores, checks, `forget --prune`, prefix deletion, and emptying the bucket. Only `DeleteBucket` returns `403 AccessDenied` (delete the empty bucket in Cloudflare Dashboard).
+   - **Admin Read & Write**: Account-wide across all buckets; only needed if you want in-app bucket deletion (not recommended for routine use).
+   - Record **Access Key ID** and **Secret Access Key** immediately (displayed only once).
+4. **Configure Restic Tray (`設定` / Settings)**:
+
+| Cloudflare Value | Restic Tray Field (`設定`) | Storage |
+| :--- | :--- | :--- |
+| Account ID (32-char hex) | 保存先 -> アカウント ID | `config.json` (plain text) |
+| Bucket name | 保存先 -> バケット | `config.json` (plain text) |
+| Optional prefix (default `restic-windows`, blank = bucket root) | 保存先 -> バケット内のフォルダ | `config.json` (plain text) |
+| Access Key ID | 認証情報 -> アクセスキー ID | `config\credentials.dat` (Windows DPAPI) |
+| Secret Access Key | 認証情報 -> シークレットアクセスキー | `config\credentials.dat` (Windows DPAPI) |
+| Strong user-chosen repository password | 認証情報 -> リポジトリのパスワード | `config\credentials.dat` (Windows DPAPI) |
+
+**CRITICAL PASSWORD WARNING**: Store your Restic repository password outside Restic Tray (password manager or offline backup). `credentials.dat` is DPAPI-bound to your current PC and Windows user account and cannot be decrypted on another PC or after Windows reinstall. R2 API tokens can be reissued, but losing the repository password makes encrypted backups permanently unrecoverable.
+
+5. Click **保存** (`Ctrl+S`), click **認証情報を保存**, then click **リポジトリを作成** (new repository) or **接続を確認** (existing repository).
+6. **Leaked token rotation**: Revoke compromised token in Cloudflare Dashboard -> issue new bucket-scoped `Object Read & Write` token -> enter new Access Key ID & Secret Access Key in Restic Tray leaving the repository password field blank (keeps existing password) -> save -> run **接続を確認**.
+
+---
+
+## 5. Basic Usage, Defaults & Exclusions
+
+Runtime data directory: `%LOCALAPPDATA%\io.github.nayuengin.restic-tray\`
+- `config.json`: Non-secret declarative settings
+- `config\credentials.dat`: Windows DPAPI-encrypted secrets
+- `r2_restic_history.db`: SQLite (WAL) backup run history, audit logs, and multi-PC sync state
+- `agent-bridge.json`: Ephemeral local Named Pipe address and 256-bit token while tray app is running
+
+### Default Settings & Built-in Exclusions
+
+| Category | Setting / Key | Default Value |
+| :--- | :--- | :--- |
+| R2 region & connections | `r2.region` / `r2.maxConnections` | `"auto"` / `10` |
+| Schedule interval / daily times | `schedule.intervalMinutes` / `schedule.dailyAt` | `60` minutes / `[]` (`dailyAt` overrides interval when non-empty; 0-60s jitter) |
+| Periodic restore verification | `schedule.verifyEveryDays` / `schedule.verifyReadPercent` | Every `7` days / `5`% read-back (`0` disables) |
+| Overdue alert threshold | `schedule.notifyOverdueHours` | `48` hours (`0` disables) |
+| Automatic post-backup prune | `schedule.autoPruneAfterBackup` | `false` |
+| Retention policy | `keepLast` / `keepDaily` / `keepWeekly` / `keepMonthly` | `10` / `7` / `4` / `6` |
+| Built-in excludes flag | `useBasicExcludes` | `true` |
+| General built-in excludes | `BASIC_EXCLUDES` | `target/`, `node_modules/`, `.venv/`, `.pytest_cache/`, `__pycache__/`, `.git/objects/pack/tmp_pack_*`, `*.tmp`, `*.part`, `.next/`, `shadercompiler-*.log`, `AssetImportWorker*.log` |
+| Unity project-root excludes | `BASIC_UNITY_PROJECT_EXCLUDES` (under folders with `ProjectSettings\ProjectVersion.txt`, up to depth 3) | `Library`, `Temp`, `Logs`, `obj`, `Build`, `Builds`, `Assets\SerializedUdonPrograms` (does NOT exclude matching names inside `Assets/` or `Packages/`) |
+| Marker-based excludes | `BASIC_EXCLUDE_IF_PRESENT` | `SourceAssetDB`, `UnityLockfile`, `CACHEDIR.TAG:Signature: 8a477f597d28d172789f06886806bc55`, `pyvenv.cfg` |
+| Multi-PC handoff (experimental) | `projectKey`, `writerState`, `maintenanceRole` | Opt-in per non-Git folder; rejects `.git`; only one PC should be `maintenanceRole: "primary"` |
+
+Safety guard: Restic Tray refuses to back up if any exclude pattern matches the target path itself.
+
+---
+
+## 6. MCP Integration (`restic-tray.exe --mcp`)
+
+Architecture: `MCP Client -> stdio JSON-RPC 2.0 -> restic-tray.exe --mcp -> Windows Named Pipe (reject_remote_clients(true) + 256-bit mutual token) -> Running Tray App` (automatically falls back to headless local controller when tray app is closed).
+
+Registration (Claude Code):
+```powershell
+claude mcp add --scope user restic-tray -- "$env:LOCALAPPDATA\Programs\Restic Tray\restic-tray.exe" --mcp
+```
+
+Registration (`mcpServers` JSON for Claude Desktop / Cursor):
+```json
+{
+  "mcpServers": {
+    "restic-tray": {
+      "command": "C:\\Users\\<YourUser>\\AppData\\Local\\Programs\\Restic Tray\\restic-tray.exe",
+      "args": ["--mcp"]
+    }
+  }
+}
+```
+
+### MCP Safety Policy Defaults
+- Secrets are never returned or accepted over MCP; `resticBinaryPath` modification is blocked via MCP.
+- `agent.enabled`: `true`
+- `agent.allowRestore`: `true` (restores only to a separate `fs_safety`-validated `targetDir`)
+- `agent.allowPrune`: `false` (blocks `forget_prune`, `update_retention_policy`, enabling `autoPruneAfterBackup`, changing `maintenanceAt`, and post-backup auto-pruning from MCP runs)
+- `agent.allowDeleteStorage`: `false` (blocks `delete_r2_bucket`)
+- `agent.allowHandoff`: `false` (blocks `takeover_project`)
+- Empty arrays for `includePaths`, `targetIds`, or `projectKeys` are rejected rather than expanding to "all".
+
+### All 22 MCP Tools
+
+| Tool | Arguments | Purpose |
+| :--- | :--- | :--- |
+| `get_status` | None | Resident state, machine name, maintenance role, sync summary, R2/DPAPI readiness, bundled restic info, next run, progress, active basic excludes |
+| `get_config` | None | Non-secret `config.json` |
+| `get_backup_history` | `limit?` | SQLite backup runs (`deferred`, `topAdded`, `bytesDelta`, `filesDelta`, `excludesChanged`) and audit logs |
+| `list_snapshots` | `tag?`, `path?`, `projectKey?`, `host?` | List snapshots in R2 |
+| `list_snapshot_files` | `snapshotId`, `prefix?`, `maxEntries?` | List files in a snapshot |
+| `diff_snapshots` | `snapshotA`, `snapshotB` | Diff stats and changed paths between two snapshots |
+| `get_size_breakdown` | `snapshotId?`, `limit?` | Folder size totals up to 2 levels below target root (defaults to latest, limit 30) |
+| `run_backup` | `targetIds?`, `projectKeys?`, `dryRun?`, `tags?`, `markHandoffReady?` | 1-target-1-snapshot backup (supports `dryRun: true`) |
+| `cancel_backup` | None | Cancel active backup or takeover restore immediately |
+| `init_repository` | None | Initialize R2 repository (`restic init`) |
+| `check_repository` | `readDataPercent?` | Run `restic check` (1-100 downloads and verifies subset) |
+| `update_storage_config` | `storageBackend?: "r2"`, `r2?` | Update non-secret R2 config |
+| `add_backup_target` | `path`, `label?`, `excludePatterns?`, `tags?`, `enabled?`, `projectKey?`, `writerState?` | Canonicalize and add/update folder target |
+| `remove_backup_target` | `idOrPath` | Remove target from `config.json` |
+| `update_schedule` | `enabled?`, `intervalMinutes?`, `dailyAt?`, `maintenanceAt?`, `runOnStartup?`, `autoPruneAfterBackup?`, `verifyEveryDays?`, `verifyReadPercent?`, `notifyOverdueHours?` | Update schedule, restore check, and overdue alert settings |
+| `update_retention_policy` | `keepLast?`, `keepDaily?`, `keepWeekly?`, `keepMonthly?` | Update retention policy (blocked when `allowPrune: false`) |
+| `restore_snapshot` | `snapshotId`, `targetDir`, `includePaths?` | Full or selective restore to validated `targetDir` |
+| `forget_prune` | `dryRun?`, `confirmPrune?` | Opt-in (`allowPrune: true`); requires `dryRun: false` + `confirmPrune: true` |
+| `delete_r2_bucket` | `scope: "prefixOnly"|"entireBucket"`, `dryRun?`, `confirmBucketName?` | Opt-in (`allowDeleteStorage: true`); requires `dryRun: false` + exact `confirmBucketName` |
+| `get_project_sync_status` | `projectKey?`, `refresh?`, `checkLocalChanges?` | *(Experimental)* Multi-PC sync status |
+| `release_project` | `projectKey`, `dryRun?` | *(Experimental)* Tag `handoff:released` snapshot and set `standby` |
+| `takeover_project` | `projectKey`, `localPath?`, `dryRun?`, `saveLocalBackupFirst?`, `confirmDiscardLocalChanges?`, `forceWhileRemoteActive?`, `deleteExtra?`, `confirmProjectKey?` | *(Experimental, opt-in `allowHandoff: true`)* Subpath-rewritten restore + ownership claim |
+
+---
+
+## 7. Backup & Restore Procedures
+
+- **GUI Restore**: Open `スナップショット` (Snapshots) -> load from R2 -> pick snapshot -> select a **separate destination folder** (drive roots like `C:\`, `..` traversal, unresolved reparse points, and Windows system folders are blocked by `fs_safety`) -> optionally enter comma-separated snapshot paths for selective restore -> restore. Restic recreates `<DriveLetter>\<original path>` inside the destination folder.
+- **New PC Disaster Recovery**: Install Restic Tray -> enter identical Account ID, Bucket, Prefix -> enter valid R2 API token (can be freshly issued) + **exact original Restic repository password** -> run `接続を確認` -> restore from `スナップショット`.
+- **Recover Without Restic Tray (Official `restic` CLI)**:
+
+```powershell
+$env:AWS_ACCESS_KEY_ID = "<your-r2-access-key-id>"
+$env:AWS_SECRET_ACCESS_KEY = "<your-r2-secret-access-key>"
+$env:AWS_DEFAULT_REGION = "auto"
+$env:RESTIC_REPOSITORY = "s3:https://<accountId>.r2.cloudflarestorage.com/<bucket>/<prefix>"
+# Leave RESTIC_PASSWORD unset so restic prompts interactively.
+
+.\restic.exe snapshots
+.\restic.exe restore <snapshot-id> --target D:\Restore
+```
+
+---
+
+## 8. Troubleshooting Quick Reference
+
+| Symptom | Root Cause | Resolution |
+| :--- | :--- | :--- |
+| Windows SmartScreen / Smart App Control warning | Initial v1.0.0 releases are unsigned | Verify `SHA256SUMS.txt` and `gh attestation verify`, then click More info -> Run anyway (or build from source if Smart App Control blocks unsigned binaries). |
+| Scheduled backups stopped after reboot | No automatic Windows Startup registration yet | Add shortcut `"%LOCALAPPDATA%\Programs\Restic Tray\restic-tray.exe" --minimized` in `shell:startup`. |
+| `credentials.dat` decryption error | DPAPI is bound to original PC and Windows user | Re-enter R2 keys and original repository password in Settings (remove corrupt `credentials.dat` first if needed). |
+| `403 AccessDenied` on entire-bucket deletion | Bucket-scoped `Object Read & Write` token lacks `DeleteBucket` | Expected after emptying objects; delete the empty bucket container in Cloudflare Dashboard. |
+| Backup refused due to exclude pattern match | An exclude pattern (e.g. `target/`) matches the target path itself | Rename/move parent folder, adjust excludes, or disable `useBasicExcludes`. |
+| History shows `deferred` | Another process/PC holds an exclusive repository lock (exit code 11) | Scheduled backups auto-retry after 15 minutes (up to 2 retries); unlock stale locks only after confirming no other PC is pruning/checking. |
+| MCP destructive call rejected | Opt-in guard is `false` or confirmation missing | Enable `allowPrune` / `allowDeleteStorage` / `allowHandoff` in `config.json` and pass `dryRun: false` + confirmation field. |
+| Startup error mentioning removed Google Drive backend | Legacy `config.json` still has `"storageBackend": "googleDrive"` | Remove that key from `config.json`, configure Cloudflare R2, and restart (existing Google Drive data stays recoverable via `restic` + `rclone`). |
+
+---
+
+## 9. Frequently Asked Questions (Q&A) & Support Policy
+
+- **Q: Does Restic Tray start automatically when I sign in to Windows?**
+  A: No, not automatically yet. Place a shortcut to `restic-tray.exe --minimized` in `shell:startup`.
+- **Q: Can I restore my data if I lose my PC? What if I forget the repository password?**
+  A: Yes if you kept a copy of your Restic repository password outside the PC (R2 API tokens can be reissued). If the repository password is lost, encrypted backups cannot be recovered because `credentials.dat` cannot be decrypted on another PC.
+- **Q: Can Cloudflare read my backed-up files?**
+  A: No. Restic encrypts all file contents, filenames, and metadata client-side on your PC before upload, and your password never leaves your machine.
+- **Q: Why is Unity's `Library` folder not included in my backups?**
+  A: Unity project-root generated folders (`Library`, `Temp`, `Logs`, `obj`, `Build`, `Builds`, `Assets\SerializedUdonPrograms`) are excluded by default (`useBasicExcludes: true`) to save space and upload time. Folders inside `Assets` or `Packages` are still backed up.
+- **Q: Can I back up Git repositories too?**
+  A: Yes. The entire folder including `.git` is backed up (skipping only temporary `.git/objects/pack/tmp_pack_*` files). Multi-PC `projectKey` handoff rejects `.git` folders.
+- **Q: How much does Cloudflare R2 cost?**
+  A: Check https://developers.cloudflare.com/r2/pricing/ for current storage, operation, and free-tier terms. Egress fees are $0; Cloudflare requires a payment method on file to enable R2.
+- **Q: Why does Windows SmartScreen warn when I run the installer?**
+  A: Initial releases are unsigned. Verify `SHA256SUMS.txt` and `gh attestation verify` before running.
+- **Q: Will Restic Tray support other cloud storage providers, macOS/Linux, or an English UI?**
+  A: Current scope is Windows 10+ x64 (TLS 1.2+), Cloudflare R2, and Japanese desktop UI. Requests outside this scope are welcome as GitHub Issues without an implementation commitment.
+- **Q: Does Restic Tray send data anywhere other than my Cloudflare R2 bucket?**
+  A: No. There is no author-operated server, no analytics or telemetry, and no update-check traffic.
+- **Q: How do I get notified about new releases?**
+  A: Click Watch -> Custom -> Releases on https://github.com/nayuengin/restic-tray.
+
+**Support Policy & Disclaimer**: Only the latest release is supported (no backports, no SLA, best-effort maintenance under Semantic Versioning). Under the MIT License and project disclaimer, Restic Tray does not guarantee backup integrity or recoverability — test restoring your data periodically. Report vulnerabilities privately via https://github.com/nayuengin/restic-tray/security/advisories/new.

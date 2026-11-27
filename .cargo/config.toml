@@ -1,0 +1,4 @@
+# Link the C runtime into the exe. Without this the app needs vcruntime140.dll, which a fresh
+# Windows does not have, and fails to start there with 0xC0000135.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

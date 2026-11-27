@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="color-scheme" content="light dark">
+  <script>try{var s=localStorage.getItem("color-scheme");if(s==="light"||s==="dark")document.querySelector('meta[name="color-scheme"]').content=s}catch(e){}</script>
+  <title>Backup &amp; Restore Procedures | Restic Tray Docs</title>
+  <meta name="description" content="Step-by-step backup and restore guide for Restic Tray: dry-run verification, GUI full and selective restore, new-PC disaster recovery, and standalone restic CLI recovery.">
+  <link rel="canonical" href="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <link rel="alternate" hreflang="en" href="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <link rel="alternate" hreflang="ja" href="https://nayuengin.github.io/restic-tray/ja/docs/backup-restore.html">
+  <link rel="alternate" hreflang="x-default" href="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <link rel="alternate" type="text/plain" title="LLMs.txt" href="../llms.txt">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Restic Tray">
+  <meta property="og:title" content="Backup &amp; Restore Procedures | Restic Tray Docs">
+  <meta property="og:description" content="Step-by-step backup and restore guide for Restic Tray: dry-run verification, GUI full and selective restore, new-PC disaster recovery, and standalone restic CLI recovery.">
+  <meta property="og:url" content="https://nayuengin.github.io/restic-tray/docs/backup-restore.html">
+  <meta property="og:locale" content="en_US">
+  <meta property="og:locale:alternate" content="ja_JP">
+  <meta property="og:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Backup &amp; Restore Procedures | Restic Tray Docs">
+  <meta name="twitter:description" content="Step-by-step backup and restore guide for Restic Tray: dry-run verification, GUI full and selective restore, new-PC disaster recovery, and standalone restic CLI recovery.">
+  <meta name="twitter:image" content="https://nayuengin.github.io/restic-tray/assets/og-image.png">
+  <meta name="twitter:image:alt" content="Restic Tray — Pure-Rust Windows system tray app for encrypted Cloudflare R2 backups with Restic and MCP">
+  <link rel="icon" href="../assets/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="../assets/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","@id":"https://nayuengin.github.io/restic-tray/#software","name":"Restic Tray","alternateName":"restic-tray","applicationCategory":"UtilitiesApplication","applicationSubCategory":"Backup Software","operatingSystem":"Windows 10, Windows 11, Windows Server 2016 (x64)","softwareRequirements":"Windows 10 / Windows Server 2016 or later (x64), TLS 1.2+","softwareVersion":"1.0.0","description":"Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.","url":"https://nayuengin.github.io/restic-tray/","downloadUrl":"https://github.com/nayuengin/restic-tray/releases/latest","installUrl":"https://nayuengin.github.io/restic-tray/docs/installation.html","sameAs":["https://github.com/nayuengin/restic-tray"],"license":"https://opensource.org/licenses/MIT","isAccessibleForFree":true,"inLanguage":["ja","en"],"screenshot":"https://nayuengin.github.io/restic-tray/assets/screenshots/overview.png","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Client-side encrypted Restic backups (AES-256-CTR + Poly1305-AES) to Cloudflare R2","Windows DPAPI + secondary entropy + Zeroize credential isolation (credentials.dat)","Single-binary built-in 22-tool MCP server (--mcp) with Named Pipe mutual authentication","Built-in cache and Unity project-root excludes plus excludeIfPresent marker support","Automated periodic restore checks (5% every 7 days) and Windows overdue toast alerts (48h default)","Standard restic repository format recoverable anytime with the standalone restic CLI"]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://nayuengin.github.io/restic-tray/"},{"@type":"ListItem","position":2,"name":"Docs","item":"https://nayuengin.github.io/restic-tray/docs/"},{"@type":"ListItem","position":3,"name":"Backup & Restore","item":"https://nayuengin.github.io/restic-tray/docs/backup-restore.html"}]}</script>
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Backup & Restore Procedures","inLanguage":"en","url":"https://nayuengin.github.io/restic-tray/docs/backup-restore.html","image":"https://nayuengin.github.io/restic-tray/assets/og-image.png","dateModified":"2026-11-26","about":{"@id":"https://nayuengin.github.io/restic-tray/#software"}}</script>
+</head>
+<body>
+  <a class="skip-link visually-hidden" href="#main-content">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="site-logo" href="../">
+        <img src="../assets/icon.svg" alt="" width="30" height="30">
+        <span>Restic Tray</span>
+      </a>
+
+      <nav class="site-nav" aria-label="Primary">
+        <button class="menu-button" type="button" popovertarget="site-menu" popovertargetaction="toggle" aria-controls="site-menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Menu</span>
+        </button>
+
+        <ul id="site-menu" class="site-menu" popover="auto">
+          <li><a href="../">Home</a></li>
+          <li><a href="./" aria-current="page">Docs</a></li>
+          <li><a href="mcp.html">MCP</a></li>
+          <li><a href="installation.html">Download</a></li>
+          <li><a class="nav-external" href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer"><span>GitHub</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></li>
+        </ul>
+      </nav>
+
+      <div class="header-tools">
+        <a class="lang-switch" href="../ja/docs/backup-restore.html" hreflang="ja" lang="ja">日本語</a>
+        <button id="theme-toggle" class="theme-toggle" type="button">
+          <span class="icon-to-dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg><span class="visually-hidden">Switch to dark theme</span></span>
+          <span class="icon-to-light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg><span class="visually-hidden">Switch to light theme</span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main-content" tabindex="-1">
+    <div class="container docs-shell has-toc">
+      <details class="docs-mobile-nav">
+        <summary><span>Documentation menu: Backup &amp; Restore</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></summary>
+        <nav aria-label="Documentation menu">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html" aria-current="page">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </details>
+
+      <aside class="docs-sidebar-desktop" aria-label="Documentation">
+        <p class="docs-nav-heading">Documentation</p>
+        <nav aria-label="Documentation">
+          <ul class="docs-nav-list">
+          <li><a href="./">Overview</a></li>
+          <li><a href="installation.html">Installation &amp; Verification</a></li>
+          <li><a href="setup.html">Initial Setup &amp; Cloudflare R2</a></li>
+          <li><a href="usage.html">Basic Usage</a></li>
+          <li><a href="mcp.html">MCP Integration</a></li>
+          <li><a href="backup-restore.html" aria-current="page">Backup &amp; Restore</a></li>
+          <li><a href="troubleshooting.html">Troubleshooting</a></li>
+          <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </nav>
+      </aside>
+
+      <article class="doc-article">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <ol>
+          <li><a href="../">Home</a></li>
+          <li><a href="./">Docs</a></li>
+          <li aria-current="page">Backup &amp; Restore</li>
+          </ol>
+        </nav>
+
+        <h1>Backup &amp; Restore Procedures</h1>
+        <p class="doc-lead">Run dry-runs and encrypted backups, restore full or selective paths in the GUI, recover on a brand-new PC, or restore with the official restic CLI alone.</p>
+
+        <p>Restic Tray creates one encrypted snapshot per folder and never overwrites source folders during restore. All snapshots use the standard restic repository format and can be restored from the GUI, over MCP, on a new PC, or with the standalone <code>restic</code> CLI.</p>
+        <div class="table-wrapper" tabindex="0" role="region" aria-labelledby="restore-modes-caption">
+  <table>
+    <caption id="restore-modes-caption">Restore methods, scope, and built-in safety guards</caption>
+    <thead>
+      <tr>
+        <th scope="col">Method</th>
+        <th scope="col">What You Need</th>
+        <th scope="col">Safety Guard &amp; Output Path</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row"><strong>GUI Restore</strong> (Snapshots screen)</th>
+        <td data-label="What You Need">Running Restic Tray configured with R2 credentials</td>
+        <td data-label="Safety Guard &amp; Output Path">Restores into a separate folder validated by <code>fs_safety</code>; blocks drive roots (<code>C:\</code>), <code>..</code> traversal, and Windows system paths; supports full or comma-separated partial paths.</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>MCP Restore</strong> (<code>restore_snapshot</code>)</th>
+        <td data-label="What You Need">MCP client + <code>agent.allowRestore: true</code> (default)</td>
+        <td data-label="Safety Guard &amp; Output Path">Restores full snapshot or explicit <code>includePaths</code> into a validated <code>targetDir</code>; rejects empty <code>includePaths: []</code>.</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>New PC Recovery</strong></th>
+        <td data-label="What You Need">Fresh Restic Tray install + R2 token + original repository password</td>
+        <td data-label="Safety Guard &amp; Output Path">Re-enter identical Account ID, Bucket, Prefix, and external repository password; run <strong>接続を確認</strong> then restore.</td>
+      </tr>
+      <tr>
+        <th scope="row"><strong>Official <code>restic</code> CLI</strong> (without app)</th>
+        <td data-label="What You Need">Official <code>restic.exe</code> + R2 keys + repository password</td>
+        <td data-label="Safety Guard &amp; Output Path">Standard restic format with zero vendor lock-in; outputs under <code>&lt;target&gt;\&lt;DriveLetter&gt;\&lt;original\path&gt;</code>.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+        <h2 id="backup-workflow">How to run your first backup (Dry-Run &rarr; Live)</h2>
+        <ol>
+          <li>Open <strong>フォルダ</strong> (Folders) and verify all target folders and exclude settings (<strong>基本の除外パターンを有効にする</strong>).</li>
+          <li>Return to <strong>概要</strong> (Overview) and click <strong>テスト実行</strong> (Dry-Run). This executes <code>restic backup --dry-run</code> without uploading data so you can confirm file counts and check that caches/generated folders are excluded as expected.</li>
+          <li>Click <strong>今すぐバックアップ</strong> (Back up now) to perform the first real encrypted upload. Each enabled folder creates its own snapshot (1 target = 1 snapshot).</li>
+          <li>Once verified, enable automatic scheduling under <strong>設定 &rarr; スケジュール</strong> and verify your <a href="installation.html#startup">Windows Startup shortcut</a>.</li>
+        </ol>
+
+        <h2 id="gui-restore">Restoring Data from the GUI</h2>
+        <figure>
+          <picture>
+  <source srcset="../assets/screenshots/snapshots.webp" type="image/webp">
+  <img src="../assets/screenshots/snapshots.png" alt="Restic Tray Snapshots screen displaying snapshot metadata, diff picker, and restore panel" width="1240" height="820" loading="lazy">
+</picture>
+          <figcaption>Snapshots (<code>スナップショット</code>) screen for browsing files, comparing diffs, and restoring to a separate destination.</figcaption>
+        </figure>
+        <ol>
+          <li>Open <strong>スナップショット</strong> (Snapshots) and click <strong>R2 から読み込む</strong> (or <strong>再読み込み</strong>) to load snapshots from Cloudflare R2.</li>
+          <li>Select a snapshot on the left to inspect its metadata, browse files (<strong>ファイル一覧を表示</strong>), or compare changes against another snapshot (<strong>差分を表示</strong>).</li>
+          <li>Under <strong>復元</strong> (Restore), choose a <strong>separate destination folder</strong> such as <code>D:\Restore\2026-11-26</code>. Restic Tray enforces <code>fs_safety</code> rules and rejects drive roots (<code>C:\</code>), unresolved reparse points, <code>..</code> traversal, and Windows system paths (<code>C:\Windows</code>, <code>C:\Program Files</code>, etc.).</li>
+          <li><strong>Optional partial restore</strong>: Under <strong>一部だけ復元する（任意）</strong>, enter comma-separated snapshot paths (for example <code>/D/Projects/SampleWorld/notes</code>) or leave blank to restore the full snapshot. Over MCP, pass <code>includePaths</code> to <code>restore_snapshot</code>.</li>
+          <li>Click <strong>復元する</strong> (Restore) and confirm in the dialog.</li>
+        </ol>
+        <aside class="callout" aria-label="How restored paths are structured">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>How restored paths are structured</span></div>
+  <p>Restic recreates the original drive-letter hierarchy inside your destination folder. For example, restoring a snapshot of <code>D:\Projects\SampleWorld</code> into <code>D:\Restore\2026-11-26</code> places files under <code>D:\Restore\2026-11-26\D\Projects\SampleWorld\...</code>. Original folders are never overwritten in place.</p>
+</aside>
+
+        <h2 id="disaster-recovery">Disaster Recovery on a New PC</h2>
+        <p>If your PC fails, is lost, or Windows is freshly reinstalled:</p>
+        <ol>
+          <li>Install Restic Tray on the new Windows PC.</li>
+          <li>Open <strong>設定 &rarr; 保存先</strong> (Storage) and enter the exact same Cloudflare R2 <strong>Account ID</strong>, <strong>Bucket</strong>, and <strong>Prefix</strong>, then click <strong>保存</strong>.</li>
+          <li>Open <strong>設定 &rarr; 認証情報</strong> (Credentials), enter valid R2 API credentials (you can issue a fresh API token in Cloudflare Dashboard at any time) and your <strong>exact original Restic repository password</strong> from your external password manager/backup, then click <strong>認証情報を保存</strong>.</li>
+          <li>Click <strong>接続を確認</strong> (Verify connection) to confirm access and repository integrity.</li>
+          <li>Open <strong>スナップショット</strong> (Snapshots) and restore your files into a safe destination folder.</li>
+        </ol>
+
+        <h2 id="cli-recovery">Recover Without Restic Tray (Official <code>restic</code> CLI)</h2>
+        <p>Because Restic Tray writes a standard, unmodified Restic repository, you are never locked into this app. You can inspect and recover all data using only the official <code>restic</code> binary:</p>
+        <ol>
+          <li>Download the official Windows <code>restic.exe</code> from <a href="https://github.com/restic/restic/releases" rel="noopener noreferrer">restic/restic Releases</a>.</li>
+          <li>Set your Cloudflare R2 S3 environment variables for the current PowerShell session:</li>
+        </ol>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="Copy PowerShell code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="Configure R2 environment variables for standalone restic CLI recovery" tabindex="0"><code>$env:AWS_ACCESS_KEY_ID = &quot;&lt;your-r2-access-key-id&gt;&quot;
+$env:AWS_SECRET_ACCESS_KEY = &quot;&lt;your-r2-secret-access-key&gt;&quot;
+$env:AWS_DEFAULT_REGION = &quot;auto&quot;
+$env:RESTIC_REPOSITORY = &quot;s3:https://&lt;accountId&gt;.r2.cloudflarestorage.com/&lt;bucket&gt;/&lt;prefix&gt;&quot;
+# Omit /&lt;prefix&gt; if your repository is stored at the bucket root.</code></pre>
+</div>
+        <aside class="callout" aria-label="Keep your repository password out of shell history">
+  <div class="callout-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg><span>Keep your repository password out of shell history</span></div>
+  <p>Leave <code>$env:RESTIC_PASSWORD</code> unset so <code>restic.exe</code> prompts you interactively instead of recording your password in PowerShell command history.</p>
+</aside>
+        <ol start="3">
+          <li>List available snapshots and restore to a separate destination folder:</li>
+        </ol>
+        <div class="code-block">
+  <div class="code-header">
+    <span>PowerShell</span>
+    <button class="copy-btn" type="button" aria-label="Copy PowerShell code">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span class="copy-label">Copy</span>
+    </button>
+  </div>
+  <pre role="region" aria-label="List snapshots and restore using official restic.exe" tabindex="0"><code>.\restic.exe snapshots
+.\restic.exe restore &lt;snapshot-id&gt; --target D:\Restore</code></pre>
+</div>
+        <p>Restored files appear under <code>D:\Restore\&lt;DriveLetter&gt;\&lt;original\path&gt;\...</code>. To verify repository integrity manually at any time, run <code>.\restic.exe check --read-data-subset=5%</code>.</p>
+
+      <nav class="doc-pager" aria-label="Pagination">
+        <a class="pager-link prev" href="mcp.html">
+          <span class="pager-dir"><svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Previous</span>
+          <span class="pager-title">MCP Integration</span>
+        </a>
+        <a class="pager-link next" href="troubleshooting.html">
+          <span class="pager-dir">Next<svg class="pager-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></span>
+          <span class="pager-title">Troubleshooting</span>
+        </a>
+      </nav>
+      </article>
+      <aside class="docs-toc" aria-label="On this page">
+        <p class="docs-toc-title">On this page</p>
+        <ul>
+          <li><a href="#backup-workflow">Dry-Run &amp; Backup</a></li>
+          <li><a href="#gui-restore">Restore from the GUI</a></li>
+          <li><a href="#disaster-recovery">Disaster Recovery (New PC)</a></li>
+          <li><a href="#cli-recovery">Recover Without Restic Tray</a></li>
+        </ul>
+      </aside>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a class="site-logo" href="../">
+            <img src="../assets/icon.svg" alt="" width="28" height="28" loading="lazy">
+            <span>Restic Tray</span>
+          </a>
+          <p>Pure-Rust Windows system tray app for client-side encrypted periodic backups to Cloudflare R2 with Restic and a built-in 22-tool MCP server.</p>
+        </div>
+        <div class="footer-col">
+          <h2>Documentation</h2>
+          <ul>
+            <li><a href="installation.html">Installation &amp; Verification</a></li>
+            <li><a href="setup.html">Cloudflare R2 Setup</a></li>
+            <li><a href="mcp.html">MCP Integration (22 Tools)</a></li>
+            <li><a href="backup-restore.html">Backup &amp; Restore</a></li>
+            <li><a href="faq.html">FAQ &amp; Support Policy</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h2>Project</h2>
+          <ul>
+            <li><a href="https://github.com/nayuengin/restic-tray/releases/latest" rel="noopener noreferrer">GitHub Releases</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray" rel="noopener noreferrer">GitHub Repository</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/blob/main/CHANGELOG.md" rel="noopener noreferrer">Changelog</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/issues" rel="noopener noreferrer">Issues</a></li>
+            <li><a href="https://github.com/nayuengin/restic-tray/security/advisories/new" rel="noopener noreferrer">Report a Vulnerability</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <ul class="footer-meta"><li><a href="https://github.com/nayuengin/restic-tray/blob/main/LICENSE">MIT License</a></li><li>Windows 10+ x64</li><li>v1.0.0</li></ul>
+        <span>Unofficial open-source project. Not affiliated with, endorsed by, or sponsored by restic or Cloudflare.</span>
+      </div>
+    </div>
+  </footer>
+
+  <div id="live-announcer" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
+  <script defer src="../assets/js/site.js"></script>
+</body>
+</html>
