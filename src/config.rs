@@ -620,6 +620,13 @@ pub fn default_os_machine_name() -> String {
         .ok()
         .map(|s| s.trim().to_ascii_lowercase())
         .filter(|s| !s.is_empty())
+        .or_else(|| {
+            gethostname::gethostname()
+                .into_string()
+                .ok()
+                .map(|s| s.trim().to_ascii_lowercase())
+                .filter(|s| !s.is_empty())
+        })
         .unwrap_or_else(|| "local-pc".to_owned())
 }
 

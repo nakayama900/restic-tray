@@ -3443,6 +3443,7 @@ dependencies = [
  "dunce",
  "eframe",
  "egui",
+ "gethostname",
  "hmac",
  "image",
  "keyring",

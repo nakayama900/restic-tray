@@ -7,7 +7,7 @@
 | [`src/main.rs`](../src/main.rs) | CLI 引数解析 (`--mcp`, `--minimized`, `--config`, `--tab`, `--light`, `--screenshot`, `--version`) とモード分岐 |
 | [`src/lib.rs`](../src/lib.rs) | バックグラウンドスケジューラ・名前付きパイプ MCP ブリッジ・`eframe` ネイティブウィンドウの初期化 |
 | [`src/config.rs`](../src/config.rs) | `config.json` のスキーマ定義、Cloudflare R2 リポジトリ URL 構築、複数 PC 設定 (`machineName`, `defaultProjectRoot`, `maintenanceRole`, `projectKey`, `writerState`, `schedule.maintenanceAt`, `agent.allowHandoff`)、廃止キー (`googleDrive`, `rcloneBinaryPath`) の読み込み互換、Pkl 設定 (`config.pkl`) 評価、および `dunce::canonicalize` 付きターゲット追加・削除・アトミック書き込み |
-| [`src/secrets.rs`](../src/secrets.rs) | Windows DPAPI (`CryptProtectData` / `CryptUnprotectData`) + 二次エントロピー + `Zeroize` による `credentials.dat` 暗号化ストア（R2 キー・Restic パスワード） |
+| [`src/secrets.rs`](../src/secrets.rs) | Windows DPAPI (`CryptProtectData` / `CryptUnprotectData`) + 二次エントロピー + `Zeroize` による `credentials.dat` 暗号化ストア（R2 キー・Restic パスワード）。macOS / Linux は OS キーチェーン（Keychain / Secret Service、`keyring` クレート）に保存 |
 | [`src/fs_safety.rs`](../src/fs_safety.rs) | バックアップ対象ディレクトリの正規化検証・リストア先ディレクトリのシステムパス保護・未解決 Reparse Point 拒否・`.git` / `Temp\UnityLockfile` 検知・Windows パス ↔ Restic サブパス変換 |
 | [`src/restic/sidecar.rs`](../src/restic/sidecar.rs) | `config.json` 指定パス → バイナリ隣 / `binaries/` → システム `PATH` の順での `restic.exe` 解決 |
 | [`src/restic/runner.rs`](../src/restic/runner.rs) | シェル非経由 (`std::process::Command` + `CREATE_NO_WINDOW`) での `restic` 実行、環境変数経由での R2 認証注入、1 対象 = 1 スナップショットのバックアップ、`--host` / `--retry-lock`（終了コード 11 識別）/ `restore <id>:<subpath> --delete --exclude` / 複数 PC 対応 `forget --prune` / 安全な `unlock`、`--json` ストリーム解析 |
@@ -23,7 +23,7 @@
 | [`src/agent/bridge.rs`](../src/agent/bridge.rs) | 常駐アプリ側の Tokio 名前付きパイプサーバー (`\\.\pipe\restic-tray-agent-<hex>`) |
 | [`src/agent/mcp.rs`](../src/agent/mcp.rs) | `--mcp` 起動時の stdio JSON-RPC 2.0 サーバー（22 ツール提供、名前付きパイプ中継 + ヘッドレス直接実行フォールバック） |
 | [`src/tray.rs`](../src/tray.rs) | `tray-icon` による Windows タスクトレイ常駐と右クリックメニュー。ウィンドウをトレイに格納している間はフレーム処理（`logic` / `ui`）を止めているため、イベントはフレーム側で読まずにイベントハンドラで直接処理する |
-| [`src/notify.rs`](../src/notify.rs) | Windows のトースト通知。ウィンドウを隠している間に起きた問題（復元確認の失敗、バックアップが長く成功していない）を知らせる。`windows` クレートの WinRT API を使い、`unsafe` は書かない |
+| [`src/notify.rs`](../src/notify.rs) | Windows のトースト通知（macOS は `osascript`、Linux は `notify-send`）。ウィンドウを隠している間に起きた問題（復元確認の失敗、バックアップが長く成功していない）を知らせる。`windows` クレートの WinRT API を使い、`unsafe` は書かない |
 | [`src/instance.rs`](../src/instance.rs) | 多重起動の防止。データフォルダごとの固定名の名前付きパイプを最初のプロセスが持ち、2 回目の起動はそこへ接続して既存ウィンドウを表示させてから終了する |
 | [`src/window.rs`](../src/window.rs) | メインウィンドウの `HWND` を保持し、任意のスレッドから Win32 (`ShowWindow` / `SetForegroundWindow`) で表示・前面化する。DPAPI 以外で唯一 `unsafe` を許可しているモジュール |
 | [`src/theme.rs`](../src/theme.rs) | ダーク / ライトのデザイントークン、Windows システムフォントの読み込み、egui スタイル。[`theme/icons.rs`](../src/theme/icons.rs) に `egui::Painter` のベクターアイコン (`VectorIcon`) とブランドマーク、[`theme/widgets.rs`](../src/theme/widgets.rs) に独自ウィジェット |

@@ -25,6 +25,8 @@ hmac = "0.13"
 image = { version = "0.25", default-features = false, features = ["png"] }
 # Pure-Rust Pkl evaluator used to read config.pkl; network/package imports disabled.
 pklr = { version = "6", default-features = false, features = ["native-io"] }
+# Cross-platform hostname for the default restic --host value (COMPUTERNAME/HOSTNAME are Windows-ish).
+gethostname = "1"
 md-5 = "0.11"
 open = "5.3"
 quick-xml = "0.41"
