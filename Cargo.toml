@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 chrono = { version = "0.4", features = ["serde", "clock"] }
+dirs = "7"
 dunce = "1"
 # glow as before: eframe's default renderer became wgpu, which this app has no use for.
 eframe = { version = "0.37", default-features = false, features = ["accesskit", "clipboard", "default_fonts", "glow", "links"] }
@@ -40,6 +41,9 @@ tray-icon = "0.26"
 ureq = { version = "3", default-features = false, features = ["native-tls"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 zeroize = { version = "1", features = ["derive"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+security-framework = "3"
 
 [target.'cfg(windows)'.dependencies]
 # Same version eframe already pulls in, for toast notifications through its safe WinRT API.

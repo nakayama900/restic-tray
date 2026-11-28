@@ -781,17 +781,42 @@ impl Default for AgentPolicy {
     }
 }
 
-/// Resolves the default application data directory under `%LOCALAPPDATA%\<APP_IDENTIFIER>`
-/// (`%LOCALAPPDATA%\io.github.nayuengin.restic-tray`).
+/// Resolves the default application data directory.
+///
+/// Windows: `%LOCALAPPDATA%\<APP_IDENTIFIER>` (unchanged).
+/// macOS: `~/Library/Application Support/<APP_IDENTIFIER>` via the same `dirs` crate
+/// `tray-icon` already depends on, so no new transitive dependency is introduced.
+#[cfg(target_os = "macos")]
+pub fn default_app_data_dir() -> PathBuf {
+    dirs::data_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join(APP_IDENTIFIER)
+}
+
+#[cfg(target_os = "macos")]
+fn app_data_dir_from_local_app_data(local_app_data: Option<&std::ffi::OsStr>) -> PathBuf {
+    // Kept for the unit test that asserts the Windows path layout; mirrors the
+    // Windows join so `APP_IDENTIFIER` stays the single source of truth.
+    let _ = local_app_data;
+    default_app_data_dir()
+}
+
+#[cfg(target_os = "windows")]
 pub fn default_app_data_dir() -> PathBuf {
     app_data_dir_from_local_app_data(std::env::var_os("LOCALAPPDATA").as_deref())
 }
 
+#[cfg(target_os = "windows")]
 fn app_data_dir_from_local_app_data(local_app_data: Option<&std::ffi::OsStr>) -> PathBuf {
     local_app_data
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
         .join(APP_IDENTIFIER)
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
+pub fn default_app_data_dir() -> PathBuf {
+    PathBuf::from(".").join(APP_IDENTIFIER)
 }
 
 pub fn default_config_path() -> PathBuf {

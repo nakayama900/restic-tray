@@ -3213,6 +3213,7 @@ name = "restic-tray"
 version = "1.0.0"
 dependencies = [
  "chrono",
+ "dirs",
  "dunce",
  "eframe",
  "egui",
@@ -3225,6 +3226,7 @@ dependencies = [
  "raw-window-handle",
  "rfd",
  "rusqlite",
+ "security-framework",
  "serde",
  "serde_json",
  "sha2",

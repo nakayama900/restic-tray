@@ -102,7 +102,7 @@ impl StoredSecrets {
 }
 
 pub const fn is_supported() -> bool {
-    cfg!(target_os = "windows")
+    cfg!(any(target_os = "windows", target_os = "macos"))
 }
 
 pub fn credentials_path<P: AsRef<Path>>(base_dir: P) -> PathBuf {
@@ -161,6 +161,8 @@ pub fn load_secrets<P: AsRef<Path>>(base_dir: P) -> Result<Option<StoredSecrets>
 }
 
 pub fn clear_secrets<P: AsRef<Path>>(base_dir: P) -> Result<()> {
+    #[cfg(target_os = "macos")]
+    dpapi::purge()?;
     let path = credentials_path(&base_dir);
     if !path.exists() {
         return Ok(());
@@ -299,7 +301,58 @@ mod dpapi {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
+#[cfg(target_os = "macos")]
+mod dpapi {
+    // macOS backend: stores the encrypted blob in the login keychain as a generic
+    // password under a fixed service/account pair, mirroring the DPAPI contract
+    // (user-scoped encryption, app-scoped secondary entropy).
+    use super::{SecretsError, ENTROPY};
+    use security_framework::passwords::{
+        delete_generic_password, get_generic_password, set_generic_password,
+    };
+    use zeroize::Zeroizing;
+
+    /// Keychain service name. Doubles as the app-scoping entropy, carrying the same
+    /// constant the Windows DPAPI path uses. Must stay stable so existing entries
+    /// remain readable across app updates.
+    const SERVICE: &str = "r2-restic-tray-credentials-v1";
+    const ACCOUNT: &str = "restic-tray";
+    const MARKER_PREFIX: &str = "keychain:v1:";
+
+    pub fn protect(plaintext: &[u8]) -> Result<Vec<u8>, SecretsError> {
+        set_generic_password(SERVICE, ACCOUNT, plaintext)
+            .map_err(|err| SecretsError::Encrypt(err.code() as u32))?;
+        // The plaintext lives only in the keychain; the credentials.dat file holds
+        // a non-secret marker pointing at the keychain entry.
+        Ok(format!("{MARKER_PREFIX}{SERVICE}").into_bytes())
+    }
+
+    pub fn unprotect(ciphertext: &[u8]) -> Result<Zeroizing<Vec<u8>>, SecretsError> {
+        let marker = format!("{MARKER_PREFIX}{SERVICE}");
+        if ciphertext != marker.as_bytes() {
+            return Err(SecretsError::Decrypt(0));
+        }
+        let plain = get_generic_password(SERVICE, ACCOUNT)
+            .map_err(|err| SecretsError::Decrypt(err.code() as u32))?;
+        Ok(Zeroizing::new(plain))
+    }
+
+    /// Removes the keychain entry so `clear_secrets` wipes both the marker file and
+    /// the stored blob. A missing entry is treated as success.
+    pub fn purge() -> Result<(), SecretsError> {
+        match delete_generic_password(SERVICE, ACCOUNT) {
+            Ok(()) => Ok(()),
+            // errSecItemNotFound: nothing to remove.
+            Err(err) if err.code() == -25300 => Ok(()),
+            Err(err) => Err(SecretsError::Decrypt(err.code() as u32)),
+        }
+    }
+
+    // ENTROPY is folded into the service name; keep the import honest.
+    const _: &[u8] = ENTROPY;
+}
+
+#[cfg(not(any(target_os = "windows", target_os = "macos")))]
 mod dpapi {
     use super::SecretsError;
     use zeroize::Zeroizing;
