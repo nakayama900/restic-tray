@@ -20,8 +20,8 @@ use crate::controller::SharedController;
 
 const AUTH_TIMEOUT: Duration = Duration::from_secs(10);
 
-/// Spawn the background named-pipe server thread for the resident tray app.
-#[cfg(windows)]
+/// Spawn the background agent bridge server thread for the resident tray app
+/// (Windows named pipe; macOS/Linux Unix-domain socket).
 pub fn spawn_agent_bridge_thread(controller: Arc<SharedController>) {
     std::thread::Builder::new()
         .name("restic-tray-agent-bridge".to_owned())
@@ -42,7 +42,53 @@ pub fn spawn_agent_bridge_thread(controller: Arc<SharedController>) {
 }
 
 #[cfg(not(windows))]
-pub fn spawn_agent_bridge_thread(_controller: Arc<SharedController>) {}
+async fn serve_bridge_loop(controller: Arc<SharedController>) -> std::io::Result<()> {
+    use tokio::net::UnixListener;
+
+    let conn_path = connection_file_path(Some(&controller.base_dir));
+    if let Some(parent) = conn_path.parent() {
+        std::fs::create_dir_all(parent)?;
+    }
+
+    let info = ConnectionInfo::generate();
+    let socket_path = crate::agent::protocol::socket_path(&controller.base_dir, &info.pipe_name);
+    // A stale socket from an unclean shutdown would block the new listener.
+    let _ = std::fs::remove_file(&socket_path);
+    let listener = UnixListener::bind(&socket_path)?;
+    restrict_socket_permissions(&socket_path)?;
+    write_connection_file(&conn_path, &info)?;
+    tracing::info!(socket = %socket_path.display(), "MCP Unix-socket bridge listening");
+
+    loop {
+        if controller.is_quit_requested() {
+            break;
+        }
+        let (stream, _) = match listener.accept().await {
+            Ok(pair) => pair,
+            Err(err) => {
+                tracing::warn!("agent bridge accept failed: {err}");
+                continue;
+            }
+        };
+        let ctrl = Arc::clone(&controller);
+        let conn_info = info.clone();
+        tokio::spawn(async move {
+            handle_client(stream, ctrl, conn_info).await;
+        });
+    }
+
+    let _ = std::fs::remove_file(&socket_path);
+    let _ = std::fs::remove_file(&conn_path);
+    Ok(())
+}
+
+/// The bridge socket stays in the per-user app data folder; tighten it to the owner anyway.
+#[cfg(not(windows))]
+fn restrict_socket_permissions(path: &Path) -> std::io::Result<()> {
+    use std::os::unix::fs::PermissionsExt;
+    let perms = std::fs::Permissions::from_mode(0o600);
+    std::fs::set_permissions(path, perms)
+}
 
 #[cfg(windows)]
 async fn serve_bridge_loop(controller: Arc<SharedController>) -> std::io::Result<()> {
@@ -95,7 +141,6 @@ fn create_pipe_instance(name: &str, first: bool) -> std::io::Result<NamedPipeSer
     opts.create(name)
 }
 
-#[cfg(windows)]
 fn write_connection_file(path: &Path, info: &ConnectionInfo) -> std::io::Result<()> {
     let json = serde_json::to_vec_pretty(info)?;
     let tmp = path.with_extension("json.tmp");
@@ -103,13 +148,11 @@ fn write_connection_file(path: &Path, info: &ConnectionInfo) -> std::io::Result<
     std::fs::rename(&tmp, path)
 }
 
-#[cfg(windows)]
-async fn handle_client(
-    pipe: NamedPipeServer,
-    controller: Arc<SharedController>,
-    info: ConnectionInfo,
-) {
-    let (reader, mut writer) = tokio::io::split(pipe);
+async fn handle_client<S>(stream: S, controller: Arc<SharedController>, info: ConnectionInfo)
+where
+    S: tokio::io::AsyncRead + tokio::io::AsyncWrite,
+{
+    let (reader, mut writer) = tokio::io::split(stream);
     let mut lines = BufReader::new(reader);
     let mut authenticated = false;
 
@@ -204,7 +247,6 @@ async fn handle_client(
     }
 }
 
-#[cfg(windows)]
 async fn send_line<W: AsyncWriteExt + Unpin>(
     writer: &mut W,
     resp: &BridgeResponse,

@@ -9,6 +9,7 @@
 use std::io::{self, BufRead, BufReader, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+#[cfg(windows)]
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -685,7 +686,7 @@ fn dispatch_tool_call(
     args: &Value,
 ) -> Result<Value, String> {
     // 1. Try named pipe to the resident tray app first so GUI state stays in sync
-    if let Some(res) = try_call_named_pipe(base_dir, req_id, op, args) {
+    if let Some(res) = try_call_bridge(base_dir, req_id, op, args) {
         return res;
     }
 
@@ -714,7 +715,7 @@ fn dispatch_tool_call(
 }
 
 #[cfg(windows)]
-fn try_call_named_pipe(
+fn try_call_bridge(
     base_dir: &Path,
     req_id: u64,
     op: &str,
@@ -729,7 +730,7 @@ fn try_call_named_pipe(
         return None;
     }
 
-    let mut pipe = loop {
+    let pipe = loop {
         match open_pipe(&info.pipe_name) {
             Ok(f) => break f,
             Err(err) if err.raw_os_error() == Some(ERROR_PIPE_BUSY) => {
@@ -739,6 +740,18 @@ fn try_call_named_pipe(
         }
     };
 
+    exchange_with_bridge(pipe, &info, req_id, op, args)
+}
+
+/// Sends one request line to the resident bridge and reads one JSON response line.
+fn exchange_with_bridge(
+    stream: impl std::io::Read + std::io::Write,
+    info: &ConnectionInfo,
+    req_id: u64,
+    op: &str,
+    args: &Value,
+) -> Option<Result<Value, String>> {
+    let mut pipe = stream;
     let req = BridgeRequest {
         token: info.token.clone(),
         id: req_id,
@@ -785,13 +798,25 @@ fn try_call_named_pipe(
 }
 
 #[cfg(not(windows))]
-fn try_call_named_pipe(
-    _base_dir: &Path,
-    _req_id: u64,
-    _op: &str,
-    _args: &Value,
+fn try_call_bridge(
+    base_dir: &Path,
+    req_id: u64,
+    op: &str,
+    args: &Value,
 ) -> Option<Result<Value, String>> {
-    None
+    let conn_path = connection_file_path(Some(base_dir));
+    let raw = std::fs::read_to_string(&conn_path).ok()?;
+    let info: ConnectionInfo = serde_json::from_str(&raw).ok()?;
+    if !info.is_well_formed() {
+        return None;
+    }
+
+    let socket_path = crate::agent::protocol::socket_path(base_dir, &info.pipe_name);
+    let stream = match crate::agent::protocol::open_socket(&socket_path) {
+        Ok(s) => s,
+        Err(_) => return None,
+    };
+    exchange_with_bridge(stream, &info, req_id, op, args)
 }
 
 fn write_json_rpc_result(out: &mut impl Write, id: Value, result: Value) -> io::Result<()> {

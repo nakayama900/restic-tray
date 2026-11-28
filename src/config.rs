@@ -929,13 +929,42 @@ impl Default for AgentPolicy {
 /// Resolves the default application data directory under `%LOCALAPPDATA%\<APP_IDENTIFIER>`
 /// (`%LOCALAPPDATA%\io.github.nayuengin.restic-tray`).
 pub fn default_app_data_dir() -> PathBuf {
-    app_data_dir_from_local_app_data(std::env::var_os("LOCALAPPDATA").as_deref())
+    if cfg!(windows) {
+        app_data_dir_from_local_app_data(std::env::var_os("LOCALAPPDATA").as_deref())
+    } else {
+        app_data_dir_posix()
+    }
 }
 
 fn app_data_dir_from_local_app_data(local_app_data: Option<&std::ffi::OsStr>) -> PathBuf {
     local_app_data
         .map(PathBuf::from)
         .unwrap_or_else(|| PathBuf::from("."))
+        .join(APP_IDENTIFIER)
+}
+
+/// Per-OS application data directory on macOS / Linux:
+/// - macOS: `$HOME/Library/Application Support`
+/// - Linux: `$XDG_DATA_HOME` or `$HOME/.local/share`
+///
+/// Falls back to the current directory like the Windows path does without `LOCALAPPDATA`.
+fn app_data_dir_posix() -> PathBuf {
+    app_data_dir_posix_from(std::env::var_os("HOME"), std::env::var_os("XDG_DATA_HOME"))
+}
+
+fn app_data_dir_posix_from(
+    home: Option<std::ffi::OsString>,
+    xdg: Option<std::ffi::OsString>,
+) -> PathBuf {
+    let home = home.map(PathBuf::from);
+    let base = if cfg!(target_os = "macos") {
+        home.map(|h| h.join("Library").join("Application Support"))
+    } else if let Some(xdg) = xdg.filter(|v| !v.is_empty()) {
+        Some(PathBuf::from(xdg))
+    } else {
+        home.map(|h| h.join(".local").join("share"))
+    };
+    base.unwrap_or_else(|| PathBuf::from("."))
         .join(APP_IDENTIFIER)
 }
 
@@ -1846,6 +1875,28 @@ mod tests {
         assert!(explicit.agent.allow_prune);
         assert!(explicit.agent.allow_restore);
     }
+    #[test]
+    fn app_data_dir_posix_uses_xdg_and_home() {
+        let home = Some(std::ffi::OsString::from("/home/tester"));
+        let xdg = Some(std::ffi::OsString::from("/custom/data"));
+        let with_xdg = app_data_dir_posix_from(home.clone(), xdg);
+        assert!(with_xdg.ends_with(Path::new(APP_IDENTIFIER)));
+        if cfg!(target_os = "macos") {
+            assert!(with_xdg.starts_with(Path::new("/home/tester/Library/Application Support")));
+        } else {
+            assert_eq!(with_xdg, PathBuf::from("/custom/data").join(APP_IDENTIFIER));
+            let home_only = app_data_dir_posix_from(home, None);
+            assert_eq!(
+                home_only,
+                PathBuf::from("/home/tester/.local/share").join(APP_IDENTIFIER)
+            );
+        }
+        assert_eq!(
+            app_data_dir_posix_from(None, None),
+            PathBuf::from(".").join(APP_IDENTIFIER)
+        );
+    }
+
     #[test]
     fn rclone_backend_loads_validates_and_round_trips() {
         let dir = tempfile::tempdir().expect("tempdir");

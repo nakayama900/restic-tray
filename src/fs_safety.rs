@@ -81,6 +81,9 @@ struct ProtectedRoots {
 
 impl ProtectedRoots {
     fn from_env() -> Self {
+        if !cfg!(windows) {
+            return Self::unix_defaults();
+        }
         let system_root = std::env::var("SystemRoot")
             .or_else(|_| std::env::var("WINDIR"))
             .ok();
@@ -108,6 +111,26 @@ impl ProtectedRoots {
             program_data.as_deref(),
             user_profile.as_deref(),
         )
+    }
+
+    /// macOS / Linux protected restore destinations: OS and system trees. The filesystem root is
+    /// rejected separately by the "no parent directory" rule.
+    fn unix_defaults() -> Self {
+        let subtree: &[&str] = if cfg!(target_os = "macos") {
+            &["/System", "/usr", "/etc", "/private/etc", "/Library/System"]
+        } else {
+            &[
+                "/usr", "/etc", "/boot", "/bin", "/sbin", "/lib", "/lib64", "/var",
+            ]
+        };
+        let mut subtree_roots = Vec::new();
+        for raw in subtree {
+            push_unique_components(&mut subtree_roots, raw);
+        }
+        Self {
+            subtree_roots,
+            exact_only_roots: Vec::new(),
+        }
     }
 
     fn from_values(
@@ -199,7 +222,7 @@ fn push_unique_components(target: &mut Vec<Vec<String>>, raw: &str) {
     }
     let resolved = dunce::canonicalize(trimmed).unwrap_or_else(|_| PathBuf::from(trimmed));
     let parts = canonical_components_lower(&resolved);
-    if parts.len() >= 2 && !target.contains(&parts) {
+    if !parts.is_empty() && !target.contains(&parts) {
         target.push(parts);
     }
 }

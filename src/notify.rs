@@ -11,7 +11,43 @@ pub fn toast(title: &str, body: &str) {
         tracing::warn!("could not show a notification: {err}");
     }
     #[cfg(not(windows))]
-    let _ = (title, body);
+    if let Err(err) = show(title, body) {
+        tracing::warn!("could not show a notification: {err}");
+    }
+}
+
+#[cfg(not(windows))]
+fn show(title: &str, body: &str) -> std::io::Result<()> {
+    use std::process::{Command, Stdio};
+    let mut cmd = if cfg!(target_os = "macos") {
+        // osascript displays a native user notification; no shell is involved, the script
+        // is passed as one argument and the text is escaped for AppleScript.
+        let script = format!(
+            "display notification {} with title {}",
+            applescript_quoted(body),
+            applescript_quoted(title),
+        );
+        let mut cmd = Command::new("osascript");
+        cmd.arg("-e").arg(script);
+        cmd
+    } else {
+        let mut cmd = Command::new("notify-send");
+        cmd.arg("--app-name")
+            .arg("Restic Tray")
+            .arg(title)
+            .arg(body);
+        cmd
+    };
+    cmd.stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    cmd.status().map(|_| ())
+}
+
+#[cfg(all(not(windows), target_os = "macos"))]
+fn applescript_quoted(text: &str) -> String {
+    let escaped = text.replace('\\', "\\\\").replace('"', "\\\"");
+    format!("\"{escaped}\"")
 }
 
 /// AppUserModelID passed to Windows toast notifications, matching the installer registry key.
@@ -32,6 +68,7 @@ fn show(title: &str, body: &str) -> windows::core::Result<()> {
         .Show(&toast)
 }
 
+#[cfg(windows)]
 fn toast_xml(title: &str, body: &str) -> String {
     format!(
         "<toast><visual><binding template='ToastGeneric'><text>{}</text><text>{}</text></binding></visual></toast>",
@@ -40,6 +77,7 @@ fn toast_xml(title: &str, body: &str) -> String {
     )
 }
 
+#[cfg(windows)]
 fn xml_text(text: &str) -> String {
     text.replace('&', "&amp;")
         .replace('<', "&lt;")
@@ -59,6 +97,7 @@ mod tests {
         show("Restic Tray", "通知の表示テストです").expect("toast shown");
     }
 
+    #[cfg(windows)]
     #[test]
     fn toast_xml_escapes_markup_in_the_text() {
         assert_eq!(
