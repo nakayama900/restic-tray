@@ -32,7 +32,7 @@ Restic Tray は、Git が追わない作業途中のファイルやバイナリ�
 > [!NOTE]
 > - **非公式ソフトウェア**: Restic Tray は独立したオープンソースプロジェクトであり、[restic](https://restic.net/) および [Cloudflare](https://www.cloudflare.com/) とは一切関係がありません。
 > - **画面言語**: デスクトップ GUI および内蔵 MCP ツールの説明文は現在 **日本語のみ** です（多言語化は未対応）。
-> - **対応環境**: Windows 10 / Windows Server 2016 以降（x64）専用です。同梱する `restic.exe`（v0.18.0 以降）の要件により、Windows 10 以降および TLS 1.2 以降が必須です。
+> - **対応環境**: Windows 10 / Windows Server 2016 以降（x64）。同梱する `restic.exe`（v0.18.0 以降）の要件により、Windows 10 以降および TLS 1.2 以降が必須です。 **実験的**: コア部分は macOS / Linux でもビルド・動作します（Keychain / Secret Service による認証情報、Unix ソケットの MCP ブリッジ）。配布パッケージは引き続き Windows 用のみです。
 > - **AI による運用管理**: 本リポジトリはオーナー（`@nayuengin`）の指揮のもと AI メンテナが管理しています（運用憲章: [`AGENTS.md`](AGENTS.md)）。AI を使ったコントリビューションも、PR での開示を条件に全面的に歓迎します（[`CONTRIBUTING.md`](CONTRIBUTING.md)）。
 
 ## スクリーンショット
