@@ -4,17 +4,23 @@
 //! with application-scoped secondary entropy, wipes plaintext buffers via `zeroize::Zeroize`,
 //! and writes atomically.
 
+#[cfg(windows)]
 use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(windows)]
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+#[cfg(windows)]
 use tracing::{info, warn};
-use zeroize::{Zeroize, Zeroizing};
+use zeroize::Zeroize;
+#[cfg(windows)]
+use zeroize::Zeroizing;
 
 pub const CREDENTIALS_FILENAME: &str = "credentials.dat";
 
+#[cfg(windows)]
 /// Secondary DPAPI entropy scoping encrypted blobs to Restic Tray.
 /// Kept unchanged across the rename from "R2 Restic Tray" so existing `credentials.dat`
 /// blobs remain decryptable without re-entering secrets.
@@ -34,6 +40,10 @@ pub enum SecretsError {
         "DPAPI CryptUnprotectData failed (win32 error: {0}); credentials.dat may belong to another Windows user or be corrupted"
     )]
     Decrypt(u32),
+
+    #[cfg(not(windows))]
+    #[error("OS keychain error: {0}")]
+    Keyring(String),
 
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
@@ -78,6 +88,17 @@ impl SecretsReadiness {
             && self.has_secret_access_key
             && self.has_restic_password
     }
+
+    /// Completeness for the active storage backend: the rclone `serve s3` adapter needs no R2
+    /// credentials (rclone keeps its own in `rclone.conf`), only the Restic password.
+    pub fn is_complete_for(&self, backend: crate::config::StorageBackend) -> bool {
+        match backend {
+            crate::config::StorageBackend::Rclone => {
+                !self.vault_unreadable && self.has_restic_password
+            }
+            _ => self.is_complete(),
+        }
+    }
 }
 
 fn has_non_empty(value: &Option<String>) -> bool {
@@ -101,14 +122,20 @@ impl StoredSecrets {
     }
 }
 
-pub const fn is_supported() -> bool {
-    cfg!(target_os = "windows")
+/// Windows DPAPI always works; macOS Keychain always works; on Linux the Secret Service needs a
+/// running session D-Bus (absent in headless CI), so support is detected per call.
+pub fn is_supported() -> bool {
+    if cfg!(windows) || cfg!(target_os = "macos") {
+        return true;
+    }
+    std::env::var_os("DBUS_SESSION_BUS_ADDRESS").is_some()
 }
 
 pub fn credentials_path<P: AsRef<Path>>(base_dir: P) -> PathBuf {
     base_dir.as_ref().join("config").join(CREDENTIALS_FILENAME)
 }
 
+#[cfg(windows)]
 pub fn save_secrets<P: AsRef<Path>>(base_dir: P, secrets: &StoredSecrets) -> Result<()> {
     if !is_supported() {
         return Err(SecretsError::UnsupportedPlatform);
@@ -133,6 +160,7 @@ pub fn save_secrets<P: AsRef<Path>>(base_dir: P, secrets: &StoredSecrets) -> Res
 /// Returns `Ok(None)` ONLY when the vault file does not exist (or DPAPI is unsupported).
 /// Decryption failures and invalid decrypted JSON return `Err(...)` so callers can distinguish
 /// an absent vault from an unreadable one and never overwrite the original bytes on a partial save.
+#[cfg(windows)]
 pub fn load_secrets<P: AsRef<Path>>(base_dir: P) -> Result<Option<StoredSecrets>> {
     if !is_supported() {
         return Ok(None);
@@ -160,6 +188,7 @@ pub fn load_secrets<P: AsRef<Path>>(base_dir: P) -> Result<Option<StoredSecrets>
     Ok(Some(creds))
 }
 
+#[cfg(windows)]
 pub fn clear_secrets<P: AsRef<Path>>(base_dir: P) -> Result<()> {
     let path = credentials_path(&base_dir);
     if !path.exists() {
@@ -177,6 +206,7 @@ pub fn clear_secrets<P: AsRef<Path>>(base_dir: P) -> Result<()> {
     Ok(())
 }
 
+#[cfg(windows)]
 fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     static TMP_SEQ: AtomicU64 = AtomicU64::new(0);
     let seq = TMP_SEQ.fetch_add(1, Ordering::Relaxed);
@@ -194,6 +224,119 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
         return Err(err);
     }
     Ok(())
+}
+
+/// OS keychain credential store for macOS (Keychain) and Linux (Secret Service via D-Bus).
+///
+/// Secrets never touch `config.json` or `credentials.dat` on these platforms; each field is one
+/// keyring entry under this service name, wiped via `Zeroize` after use.
+#[cfg(not(windows))]
+mod keyring_store {
+    use super::{Result, SecretsError, StoredSecrets};
+
+    const SERVICE: &str = "io.github.nayuengin.restic-tray";
+    const ENTRY_ACCESS_KEY_ID: &str = "r2-access-key-id";
+    const ENTRY_SECRET_ACCESS_KEY: &str = "r2-secret-access-key";
+    const ENTRY_RESTIC_PASSWORD: &str = "restic-repository-password";
+
+    fn entry(user: &str) -> std::result::Result<keyring::Entry, SecretsError> {
+        keyring::Entry::new(SERVICE, user).map_err(|err| SecretsError::Keyring(err.to_string()))
+    }
+
+    fn set(user: &str, value: Option<&str>) -> Result<()> {
+        let entry = entry(user)?;
+        match value.filter(|v| !v.is_empty()) {
+            Some(v) => entry
+                .set_password(v)
+                .map_err(|err| SecretsError::Keyring(err.to_string())),
+            None => entry.delete_credential().or_else(ignore_no_entry),
+        }
+    }
+
+    fn get(user: &str) -> Result<Option<String>> {
+        match entry(user)?.get_password() {
+            Ok(v) => Ok(Some(v)),
+            Err(keyring::Error::NoEntry) => Ok(None),
+            Err(err) => Err(SecretsError::Keyring(err.to_string())),
+        }
+    }
+
+    fn ignore_no_entry(err: keyring::Error) -> Result<()> {
+        match err {
+            keyring::Error::NoEntry => Ok(()),
+            other => Err(SecretsError::Keyring(other.to_string())),
+        }
+    }
+
+    pub fn save(secrets: &StoredSecrets) -> Result<()> {
+        set(
+            ENTRY_ACCESS_KEY_ID,
+            secrets
+                .r2_access_key_id
+                .as_deref()
+                .filter(|s| !s.is_empty()),
+        )?;
+        set(
+            ENTRY_SECRET_ACCESS_KEY,
+            secrets
+                .r2_secret_access_key
+                .as_deref()
+                .filter(|s| !s.is_empty()),
+        )?;
+        set(
+            ENTRY_RESTIC_PASSWORD,
+            secrets.restic_password.as_deref().filter(|s| !s.is_empty()),
+        )?;
+        tracing::info!("Credentials saved to the OS keychain ({SERVICE})");
+        Ok(())
+    }
+
+    pub fn load() -> Result<Option<StoredSecrets>> {
+        let access_key = get(ENTRY_ACCESS_KEY_ID)?;
+        let secret_key = get(ENTRY_SECRET_ACCESS_KEY)?;
+        let password = get(ENTRY_RESTIC_PASSWORD)?;
+        if access_key.is_none() && secret_key.is_none() && password.is_none() {
+            return Ok(None);
+        }
+        Ok(Some(StoredSecrets {
+            r2_access_key_id: access_key,
+            r2_secret_access_key: secret_key,
+            restic_password: password,
+        }))
+    }
+
+    pub fn clear() -> Result<()> {
+        for user in [
+            ENTRY_ACCESS_KEY_ID,
+            ENTRY_SECRET_ACCESS_KEY,
+            ENTRY_RESTIC_PASSWORD,
+        ] {
+            entry(user)?.delete_credential().or_else(ignore_no_entry)?;
+        }
+        tracing::info!("Credentials removed from the OS keychain ({SERVICE})");
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+pub fn save_secrets<P: AsRef<Path>>(_base_dir: P, secrets: &StoredSecrets) -> Result<()> {
+    if !is_supported() {
+        return Err(SecretsError::UnsupportedPlatform);
+    }
+    keyring_store::save(secrets)
+}
+
+#[cfg(not(windows))]
+pub fn load_secrets<P: AsRef<Path>>(_base_dir: P) -> Result<Option<StoredSecrets>> {
+    if !is_supported() {
+        return Ok(None);
+    }
+    keyring_store::load()
+}
+
+#[cfg(not(windows))]
+pub fn clear_secrets<P: AsRef<Path>>(_base_dir: P) -> Result<()> {
+    keyring_store::clear()
 }
 
 #[cfg(target_os = "windows")]
@@ -299,18 +442,6 @@ mod dpapi {
     }
 }
 
-#[cfg(not(target_os = "windows"))]
-mod dpapi {
-    use super::SecretsError;
-    use zeroize::Zeroizing;
-    pub fn protect(_: &[u8]) -> Result<Vec<u8>, SecretsError> {
-        Err(SecretsError::UnsupportedPlatform)
-    }
-    pub fn unprotect(_: &[u8]) -> Result<Zeroizing<Vec<u8>>, SecretsError> {
-        Err(SecretsError::UnsupportedPlatform)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -378,6 +509,7 @@ mod tests {
         assert!(drive_only.readiness().has_restic_password);
     }
 
+    #[cfg(windows)]
     #[test]
     fn corrupted_ciphertext_and_invalid_json_return_distinct_errors() {
         if !is_supported() {
@@ -404,6 +536,7 @@ mod tests {
         ));
     }
 
+    #[cfg(windows)]
     #[test]
     fn dpapi_entropy_is_preserved_across_app_id_change() {
         // Must never change so existing credentials.dat files remain decryptable after folder copy.

@@ -635,7 +635,7 @@ impl SharedController {
             config_path: self.config_path.to_string_lossy().into_owned(),
             machine_name: cfg.effective_machine_name(),
             maintenance_role: cfg.maintenance_role,
-            storage_backend: "r2".to_owned(),
+            storage_backend: cfg.storage_backend.as_str().to_owned(),
             storage_configured: cfg.is_storage_configured(),
             repository_url: cfg.repository_url().ok(),
             r2_configured: cfg.r2.is_configured(),
@@ -3318,6 +3318,11 @@ impl SharedController {
             ));
         }
 
+        if cfg.storage_backend != crate::config::StorageBackend::R2 {
+            return Err(AppError::Config(
+                "バケット削除は Cloudflare R2 用です。Rclone アダプタ使用中は rclone でデータを管理してください".to_owned(),
+            ));
+        }
         if !cfg.r2.is_configured() {
             return Err(AppError::Config(
                 "Cloudflare R2 のアカウント ID とバケット名が設定されていません".to_owned(),
@@ -4056,26 +4061,27 @@ impl SharedController {
             .as_object()
             .ok_or_else(|| AppError::InvalidArgument("arguments must be an object".to_owned()))?;
 
-        match args.get("storageBackend") {
-            None => {}
-            Some(Value::String(s)) if s == "r2" => {}
+        let requested_backend = match args.get("storageBackend") {
+            None => None,
+            Some(Value::String(s)) if s == "r2" => Some(crate::config::StorageBackend::R2),
+            Some(Value::String(s)) if s == "rclone" => Some(crate::config::StorageBackend::Rclone),
             Some(Value::String(s)) if s == "googleDrive" => {
                 return Err(AppError::InvalidArgument(
-                    "Google Drive バックエンドは v0.8.0 で廃止されました。storageBackend には \"r2\" のみ指定できます"
+                    "Google Drive バックエンドは v0.8.0 で廃止されました。storageBackend には \"r2\" または \"rclone\" を指定してください"
                         .to_owned(),
                 ));
             }
             Some(Value::String(other)) => {
                 return Err(AppError::InvalidArgument(format!(
-                    "storageBackend must be \"r2\" (got \"{other}\")"
+                    "storageBackend must be \"r2\" or \"rclone\" (got \"{other}\")"
                 )));
             }
             Some(_) => {
                 return Err(AppError::InvalidArgument(
-                    "storageBackend must be \"r2\"".to_owned(),
+                    "storageBackend must be \"r2\" or \"rclone\"".to_owned(),
                 ));
             }
-        }
+        };
 
         if actor == "mcp" && args.get("resticBinaryPath").is_some() {
             return Err(AppError::InvalidArgument(
@@ -4084,7 +4090,29 @@ impl SharedController {
             ));
         }
 
-        reject_unknown_keys(map, &["storageBackend", "r2", "resticBinaryPath"])?;
+        if actor == "mcp"
+            && args
+                .get("rclone")
+                .is_some_and(|v| v.get("binaryPath").is_some())
+        {
+            return Err(AppError::InvalidArgument(
+                "rclone.binaryPath cannot be modified via MCP for security reasons; configure it locally in Settings or config.json"
+                    .to_owned(),
+            ));
+        }
+
+        reject_unknown_keys(map, &["storageBackend", "r2", "rclone", "resticBinaryPath"])?;
+
+        let rclone_patch = args.get("rclone");
+        if let Some(rclone_val) = rclone_patch {
+            let rclone_map = rclone_val
+                .as_object()
+                .ok_or_else(|| AppError::InvalidArgument("rclone must be an object".to_owned()))?;
+            reject_unknown_keys(
+                rclone_map,
+                &["remote", "bucket", "port", "binaryPath", "configPath"],
+            )?;
+        }
 
         let restic_path = optional_nullable_str(args, "resticBinaryPath")?;
         if let Some(Some(ref p)) = restic_path
@@ -4118,6 +4146,9 @@ impl SharedController {
             if let Some(path) = restic_path {
                 next.restic_binary_path = path;
             }
+            if let Some(backend) = requested_backend {
+                next.storage_backend = backend;
+            }
             if let Some(r2_val) = r2_patch {
                 if let Some(v) = optional_trimmed_str(r2_val, "accountId")? {
                     next.r2.account_id = v;
@@ -4137,6 +4168,28 @@ impl SharedController {
                 if let Some(v) = optional_u32_clamped(r2_val, "maxConnections", 1, 32)? {
                     next.r2.max_connections = v;
                 }
+            }
+            if let Some(rclone_val) = rclone_patch {
+                if let Some(v) = optional_trimmed_str(rclone_val, "remote")? {
+                    next.rclone.remote = v;
+                }
+                if let Some(v) = optional_trimmed_str(rclone_val, "bucket")? {
+                    next.rclone.bucket = v;
+                }
+                if let Some(v) = optional_nullable_str(rclone_val, "port")? {
+                    next.rclone.port = v.and_then(|p| p.trim().parse::<u16>().ok());
+                }
+                if let Some(v) = optional_nullable_str(rclone_val, "configPath")? {
+                    next.rclone.config_path = v;
+                }
+                if let Some(v) = optional_nullable_str(rclone_val, "binaryPath")? {
+                    next.rclone.binary_path = v;
+                }
+            }
+            if next.storage_backend == crate::config::StorageBackend::Rclone {
+                next.rclone.validate_remote().map_err(|e| {
+                    AppError::InvalidArgument(format!("rclone.remote が無効です: {e}"))
+                })?;
             }
 
             *cfg = next;

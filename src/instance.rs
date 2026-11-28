@@ -38,12 +38,113 @@ pub fn claim_or_activate(controller: &Arc<SharedController>) -> bool {
     spawned.is_err() || rx.recv().unwrap_or(true)
 }
 
+/// Unix (macOS / Linux) single-instance variant: a domain socket in the app data folder.
+/// A second launch connects to the socket to ask the resident app to show its window and exits;
+/// otherwise it binds the socket and becomes the resident app.
 #[cfg(not(windows))]
-pub fn claim_or_activate(_controller: &Arc<SharedController>) -> bool {
-    true
+pub fn claim_or_activate(controller: &Arc<SharedController>) -> bool {
+    use std::sync::mpsc;
+
+    let socket_path = unix_socket_path(&controller.base_dir);
+    let (tx, rx) = mpsc::channel();
+    let ctrl = Arc::clone(controller);
+    let spawned = std::thread::Builder::new()
+        .name("restic-tray-instance".to_owned())
+        .spawn(move || {
+            let rt = match tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+            {
+                Ok(rt) => rt,
+                Err(err) => {
+                    tracing::warn!("single-instance check skipped: {err}");
+                    let _ = tx.send(true);
+                    return;
+                }
+            };
+            rt.block_on(unix_impl::claim(&socket_path, &ctrl, tx));
+        });
+    // Failures here fail open: running twice is better than not running at all.
+    spawned.is_err() || rx.recv().unwrap_or(true)
+}
+
+#[cfg(not(windows))]
+fn unix_socket_path(base_dir: &std::path::Path) -> std::path::PathBuf {
+    base_dir.join("restic-tray-instance.sock")
+}
+
+#[cfg(not(windows))]
+mod unix_impl {
+    use std::sync::mpsc::Sender;
+    use std::time::Duration;
+
+    use tokio::net::UnixListener;
+
+    use crate::controller::SharedController;
+
+    pub(super) async fn claim(
+        socket_path: &std::path::Path,
+        controller: &SharedController,
+        keep_running: Sender<bool>,
+    ) {
+        match UnixListener::bind(socket_path) {
+            Ok(listener) => {
+                let _ = keep_running.send(true);
+                listen(listener, controller).await;
+            }
+            Err(err) if err.kind() == std::io::ErrorKind::AddrInUse => {
+                let _ = keep_running.send(!activate_running(socket_path).await);
+            }
+            Err(err) => {
+                // A stale socket file from an unclean shutdown: remove it and retry once.
+                let _ = std::fs::remove_file(socket_path);
+                match UnixListener::bind(socket_path) {
+                    Ok(listener) => {
+                        let _ = keep_running.send(true);
+                        listen(listener, controller).await;
+                    }
+                    Err(retry_err) => {
+                        tracing::warn!("single-instance check skipped: {err} / {retry_err}");
+                        let _ = keep_running.send(true);
+                    }
+                }
+            }
+        }
+    }
+
+    async fn listen(listener: UnixListener, controller: &SharedController) {
+        loop {
+            match listener.accept().await {
+                Ok((_, _)) => {
+                    controller.request_show_window();
+                    crate::window::show_main();
+                }
+                Err(err) => {
+                    tracing::warn!("single-instance socket stopped: {err}");
+                    return;
+                }
+            }
+        }
+    }
+
+    async fn activate_running(socket_path: &std::path::Path) -> bool {
+        for _ in 0..40 {
+            match tokio::net::UnixStream::connect(socket_path).await {
+                Ok(_) => return true,
+                Err(err) if err.kind() == std::io::ErrorKind::ConnectionRefused => {
+                    tokio::time::sleep(Duration::from_millis(25)).await;
+                }
+                Err(_) => {
+                    tokio::time::sleep(Duration::from_millis(25)).await;
+                }
+            }
+        }
+        false
+    }
 }
 
 /// Fixed per data folder, so an isolated `LOCALAPPDATA` (tests, screenshots) gets its own.
+#[cfg(windows)]
 fn pipe_name(base_dir: &std::path::Path) -> String {
     // FNV-1a: stable across builds, unlike std's `DefaultHasher`.
     let hash = base_dir
@@ -140,10 +241,11 @@ mod windows_impl {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, windows))]
 mod tests {
     use super::*;
 
+    #[cfg(windows)]
     #[test]
     fn pipe_name_is_per_data_folder_and_ignores_case() {
         let a = pipe_name(std::path::Path::new(r"C:\Users\a\AppData\Local\x"));

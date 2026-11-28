@@ -132,6 +132,8 @@ impl ResticTrayApp {
         ui.add_space(44.0);
         self.basic_excludes(ui, cfg.use_basic_excludes);
         ui.add_space(36.0);
+        self.ignore_sources(ui, &cfg);
+        ui.add_space(36.0);
         self.global_excludes(ui, &cfg.global_excludes);
         ui.add_space(36.0);
         self.size_breakdown(ui);
@@ -316,6 +318,68 @@ impl ResticTrayApp {
         if toggled
             && let Err(err) = self.controller.update_config(|c| {
                 c.use_basic_excludes = on;
+                Ok(())
+            })
+        {
+            self.toast_err(err.to_string());
+        }
+    }
+
+    /// Gitignore and custom ignore files: `.gitignore` in each backup target (opt-in) plus
+    /// additional ignore files in gitignore syntax applied to every target.
+    fn ignore_sources(&mut self, ui: &mut Ui, cfg: &crate::config::AppConfig) {
+        let t = self.tokens;
+        section_title(ui, &t, "Gitignore・カスタムの無視ファイル");
+        ui.label(
+            RichText::new("バックアップ対象フォルダ直下の .gitignore を無視設定として使います。カスタムの無視ファイルも追加できます。")
+                .font(body(13.5))
+                .color(t.text_2),
+        );
+        ui.add_space(14.0);
+        let mut on = cfg.use_gitignore;
+        let mut toggled = false;
+        panel_frame(&t).show(ui, |ui| {
+            ui.set_width(ui.available_width());
+            toggled = toggle_row(
+                ui,
+                &t,
+                &mut on,
+                ".gitignore を無視設定として使う",
+                Some("サブフォルダ内の .gitignore は読み込みません。! による再登録も Restic の規則に従います。"),
+            )
+            .changed();
+        });
+        if toggled
+            && let Err(err) = self.controller.update_config(|c| {
+                c.use_gitignore = on;
+                Ok(())
+            })
+        {
+            self.toast_err(err.to_string());
+        }
+        let cfg = self.controller.get_config();
+        let mut files = cfg.ignore_files.join("\n");
+        ui.add_space(12.0);
+        field_label(
+            ui,
+            &t,
+            "追加の無視ファイル（1 行 1 ファイル、対象フォルダからの相対パスまたは絶対パス）",
+        );
+        let edit = egui::TextEdit::multiline(&mut files)
+            .hint_text(RichText::new("例: .resticignore").color(t.text_3))
+            .font(mono(13.0))
+            .desired_rows(2)
+            .desired_width(f32::INFINITY);
+        let resp = ui.add(edit);
+        let apply_clicked = Btn::secondary("適用").show(ui, &t).clicked();
+        if (apply_clicked || (resp.lost_focus() && resp.changed()))
+            && let Err(err) = self.controller.update_config(|c| {
+                c.ignore_files = files
+                    .lines()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(str::to_owned)
+                    .collect();
                 Ok(())
             })
         {

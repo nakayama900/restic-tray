@@ -230,7 +230,7 @@ pub fn spawn_scheduler_thread(controller: Arc<SharedController>) {
                 && startup_cfg.is_storage_configured()
                 && controller
                     .load_secrets()
-                    .map(|s| s.readiness().is_complete())
+                    .map(|s| s.readiness().is_complete_for(startup_cfg.storage_backend))
                     .unwrap_or(false)
                 && startup_cfg.has_active_backup_targets()
             {
@@ -290,7 +290,7 @@ pub fn spawn_scheduler_thread(controller: Arc<SharedController>) {
                     let storage_ready = cfg.is_storage_configured()
                         && controller
                             .load_secrets()
-                            .map(|s| s.readiness().is_complete())
+                            .map(|s| s.readiness().is_complete_for(cfg.storage_backend))
                             .unwrap_or(false);
 
                     let outcome = if !storage_ready {
@@ -325,7 +325,7 @@ pub fn spawn_scheduler_thread(controller: Arc<SharedController>) {
                 ) && cfg.is_storage_configured()
                     && controller
                         .load_secrets()
-                        .map(|s| s.readiness().is_complete())
+                        .map(|s| s.readiness().is_complete_for(cfg.storage_backend))
                         .unwrap_or(false)
                 {
                     // Run standalone daily maintenance within [maintenanceAt, maintenanceAt + 1h)

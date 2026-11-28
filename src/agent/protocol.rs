@@ -8,7 +8,14 @@ use serde::{Deserialize, Serialize};
 use crate::config::default_app_data_dir;
 
 pub const CONNECTION_FILE: &str = "agent-bridge.json";
+#[cfg(windows)]
 pub const PIPE_PREFIX: &str = r"\\.\pipe\restic-tray-agent-";
+/// Unix (macOS / Linux): domain-socket bridges live in the app data folder, not a global
+/// namespace, so the connection file stores the bare socket file name resolved against it.
+#[cfg(not(windows))]
+pub const SOCKET_PREFIX: &str = "restic-tray-agent-";
+#[cfg(not(windows))]
+pub const SOCKET_SUFFIX: &str = ".sock";
 pub const MAX_MESSAGE_BYTES: usize = 8 * 1024 * 1024;
 pub const MAX_REQUEST_BYTES: usize = 512 * 1024;
 
@@ -53,6 +60,18 @@ pub fn open_pipe(pipe_name: &str) -> std::io::Result<std::fs::File> {
         .open(pipe_name)
 }
 
+/// Resolves a connection-file socket name against the base (app data) directory.
+#[cfg(not(windows))]
+pub fn socket_path(base_dir: &Path, socket_name: &str) -> PathBuf {
+    base_dir.join(socket_name)
+}
+
+/// Connects to the resident app's Unix-domain-socket bridge.
+#[cfg(not(windows))]
+pub fn open_socket(path: &Path) -> std::io::Result<std::os::unix::net::UnixStream> {
+    std::os::unix::net::UnixStream::connect(path)
+}
+
 pub fn connection_file_path(base_dir: Option<&Path>) -> PathBuf {
     base_dir
         .map(Path::to_path_buf)
@@ -71,16 +90,32 @@ pub struct ConnectionInfo {
 impl ConnectionInfo {
     pub fn generate() -> Self {
         Self {
+            #[cfg(windows)]
             pipe_name: format!("{PIPE_PREFIX}{}", random_hex()),
+            #[cfg(not(windows))]
+            pipe_name: format!("{SOCKET_PREFIX}{}{SOCKET_SUFFIX}", random_hex()),
             token: format!("{}{}", random_hex(), random_hex()),
             server_token: format!("{}{}", random_hex(), random_hex()),
         }
     }
 
     pub fn is_well_formed(&self) -> bool {
-        self.pipe_name
-            .strip_prefix(PIPE_PREFIX)
-            .is_some_and(|suffix| suffix.len() == 32 && is_lower_hex(suffix))
+        let endpoint_ok = {
+            #[cfg(windows)]
+            {
+                self.pipe_name
+                    .strip_prefix(PIPE_PREFIX)
+                    .is_some_and(|suffix| suffix.len() == 32 && is_lower_hex(suffix))
+            }
+            #[cfg(not(windows))]
+            {
+                self.pipe_name
+                    .strip_prefix(SOCKET_PREFIX)
+                    .and_then(|rest| rest.strip_suffix(SOCKET_SUFFIX))
+                    .is_some_and(|hex| hex.len() == 32 && is_lower_hex(hex))
+            }
+        };
+        endpoint_ok
             && [&self.token, &self.server_token]
                 .iter()
                 .all(|t| t.len() == 64 && is_lower_hex(t))

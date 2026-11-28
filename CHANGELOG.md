@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **macOS / Linux support (experimental, phase 1)**: the core app now builds and runs outside Windows.
+  - Credentials: macOS Keychain and the Linux Secret Service (via the pure-Rust `keyring` crate); Windows keeps the DPAPI `credentials.dat` vault. On Linux, secret support requires a session D-Bus (`DBUS_SESSION_BUS_ADDRESS`).
+  - App data: `~/Library/Application Support` (macOS) or `$XDG_DATA_HOME`/`~/.local/share` (Linux) instead of `%LOCALAPPDATA%`.
+  - Single-instance and the resident MCP bridge use Unix-domain sockets instead of Windows named pipes (same mutual-token authentication and wire format).
+  - Notifications: `osascript` user notifications on macOS, `notify-send` on Linux (argument arrays, no shell).
+  - Restore safety: protected system trees (`/System`, `/usr`, `/etc`, `/boot`, `/var`, ...) are refused as restore destinations in addition to filesystem roots.
+  - CI: experimental macOS and Ubuntu quality-gate jobs (fmt, clippy, unit tests) alongside the existing Windows gate. Packaging/installers remain Windows-only for now.
+
+- **Rclone `serve s3` storage backend**: `storageBackend: "rclone"` runs `rclone serve s3 --addr 127.0.0.1:<port>` as a loopback-only anonymous local S3 adapter in front of any rclone remote (including `crypt:` remotes for client-side Rclone Crypto on top of Restic encryption), while Restic keeps using its standard S3 backend. Configurable `rclone.remote`, `rclone.bucket` (mapped to a directory under the remote root), fixed port, `rclone.exe` and `rclone.conf` overrides; the adapter restarts automatically when settings change and stops on app exit. R2 credentials are not required for this backend.
+- **Gitignore & custom ignore files**: opt-in `useGitignore` honors each backup target's root `.gitignore`, and `ignoreFiles` adds custom gitignore-syntax ignore files (relative to each target or absolute). Patterns convert to Restic exclude rules (anchoring and `!` negations preserved) for backup, restore-overwrite protection and the excludes fingerprint.
+- **Pkl configuration support**: when `config.json` does not exist, a sibling `config.pkl` (Apple Pkl) is evaluated with the pure-Rust `pklr` evaluator (network/package imports disabled). Saving continues to write `config.json`, which then takes precedence.
+- MCP `update_storage_config` now accepts `storageBackend: "rclone"` and a `rclone` section; `get_status` reports the active backend.
+
 ## [1.0.0] - 2026-11-26
 
 First public release of **Restic Tray** (`restic-tray`), a pure-Rust Windows system tray application for periodic client-side encrypted backups to Cloudflare R2 via [Restic](https://restic.net/), with a built-in Model Context Protocol (MCP) server.

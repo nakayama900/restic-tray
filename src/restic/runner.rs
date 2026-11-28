@@ -176,39 +176,69 @@ fn build_restic_command(config: &AppConfig, secrets: &StoredSecrets) -> AppResul
         return Ok(cmd);
     }
 
-    let repo_url = config.repository_url()?;
     let password = secrets
         .restic_password
         .as_deref()
         .filter(|s| !s.is_empty())
         .ok_or_else(|| AppError::Config("Restic repository password is not set".to_owned()))?;
-    let access_key = secrets
-        .r2_access_key_id
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| AppError::Config("R2 Access Key ID is not set in DPAPI store".to_owned()))?;
-    let secret_key = secrets
-        .r2_secret_access_key
-        .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| {
-            AppError::Config("R2 Secret Access Key is not set in DPAPI store".to_owned())
-        })?;
 
     let (bin_path, _) = resolve_restic_path(config.restic_binary_path.as_deref());
     let mut cmd = Command::new(bin_path);
-    cmd.env("RESTIC_REPOSITORY", &repo_url)
-        .env("RESTIC_PASSWORD", password)
-        .env("AWS_ACCESS_KEY_ID", access_key)
-        .env("AWS_SECRET_ACCESS_KEY", secret_key)
-        .env("AWS_DEFAULT_REGION", config.r2.region.trim())
-        .arg("-o")
-        .arg(format!(
-            "s3.connections={}",
-            config.r2.max_connections.max(1)
-        ));
+    cmd.env("RESTIC_PASSWORD", password);
+
+    match config.storage_backend {
+        crate::config::StorageBackend::R2 => {
+            let repo_url = config.r2.repository_url()?;
+            let access_key = secrets
+                .r2_access_key_id
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| {
+                    AppError::Config("R2 Access Key ID is not set in DPAPI store".to_owned())
+                })?;
+            let secret_key = secrets
+                .r2_secret_access_key
+                .as_deref()
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
+                .ok_or_else(|| {
+                    AppError::Config("R2 Secret Access Key is not set in DPAPI store".to_owned())
+                })?;
+            cmd.env("RESTIC_REPOSITORY", &repo_url)
+                .env("AWS_ACCESS_KEY_ID", access_key)
+                .env("AWS_SECRET_ACCESS_KEY", secret_key)
+                .env("AWS_DEFAULT_REGION", config.r2.region.trim())
+                .arg("-o")
+                .arg(format!(
+                    "s3.connections={}",
+                    config.r2.max_connections.max(1)
+                ));
+        }
+        crate::config::StorageBackend::Rclone => {
+            // Anonymous loopback `rclone serve s3` adapter in front of any rclone remote
+            // (incl. `crypt:` remotes for Rclone Crypto); placeholder credentials are not secrets.
+            let endpoint = crate::rclone::ensure_adapter(config)?;
+            let bucket = config.rclone.normalized_bucket();
+            cmd.env("RESTIC_REPOSITORY", format!("s3:{endpoint}/{bucket}"))
+                .env("AWS_ACCESS_KEY_ID", crate::rclone::ADAPTER_ACCESS_KEY_ID)
+                .env(
+                    "AWS_SECRET_ACCESS_KEY",
+                    crate::rclone::ADAPTER_SECRET_ACCESS_KEY,
+                )
+                .env("AWS_DEFAULT_REGION", "local")
+                .arg("-o")
+                .arg(format!(
+                    "s3.connections={}",
+                    config.r2.max_connections.max(1)
+                ));
+        }
+        crate::config::StorageBackend::GoogleDrive => {
+            return Err(AppError::Config(
+                "storageBackend \"googleDrive\" was removed; use \"r2\" or \"rclone\"".to_owned(),
+            ));
+        }
+    }
     apply_windows_creation_flags(&mut cmd);
 
     Ok(cmd)

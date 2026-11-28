@@ -23,8 +23,14 @@ pub struct ResticBinaryInfo {
 pub fn sidecar_filenames() -> [&'static str; 2] {
     #[cfg(windows)]
     return ["restic.exe", "restic-x86_64-pc-windows-msvc.exe"];
-    #[cfg(not(windows))]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    return ["restic", "restic-aarch64-apple-darwin"];
+    #[cfg(all(target_os = "macos", not(target_arch = "aarch64")))]
+    return ["restic", "restic-x86_64-apple-darwin"];
+    #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     return ["restic", "restic-x86_64-unknown-linux-gnu"];
+    #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+    return ["restic", "restic-aarch64-unknown-linux-gnu"];
 }
 
 /// Resolve the path to `restic.exe` and describe where it was found.

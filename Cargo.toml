@@ -23,6 +23,10 @@ eframe = { version = "0.37", default-features = false, features = ["accesskit", 
 egui = "0.37"
 hmac = "0.13"
 image = { version = "0.25", default-features = false, features = ["png"] }
+# Pure-Rust Pkl evaluator used to read config.pkl; network/package imports disabled.
+pklr = { version = "6", default-features = false, features = ["native-io"] }
+# Cross-platform hostname for the default restic --host value (COMPUTERNAME/HOSTNAME are Windows-ish).
+gethostname = "1"
 md-5 = "0.11"
 open = "5.3"
 quick-xml = "0.41"
@@ -51,6 +55,15 @@ windows-sys = { version = "0.59", features = [
     "Win32_System_Memory",
     "Win32_UI_WindowsAndMessaging",
 ] }
+
+# OS keychain stores for credentials on non-Windows platforms (Windows keeps DPAPI).
+# -apple-native: macOS Keychain via Security.framework
+# -linux-native-sync: Linux Secret Service (GNOME Keyring / KWallet) via blocking D-Bus
+[target.'cfg(target_os = "macos")'.dependencies]
+keyring = { version = "4", features = ["v1"], default-features = false }
+
+[target.'cfg(all(target_os = "linux",))'.dependencies]
+keyring = { version = "4", features = ["v1"], default-features = false }
 
 [target.'cfg(windows)'.build-dependencies]
 winresource = "0.1"

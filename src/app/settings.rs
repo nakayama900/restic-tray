@@ -193,6 +193,30 @@ impl ResticTrayApp {
     fn r2_storage_fields(&mut self, ui: &mut Ui) {
         let t = self.tokens;
         let s = &mut self.settings;
+        field_label(ui, &t, "ストレージ");
+        let mut backend = if s.backend_rclone {
+            crate::config::StorageBackend::Rclone
+        } else {
+            crate::config::StorageBackend::R2
+        };
+        segmented(
+            ui,
+            &t,
+            &mut backend,
+            &[
+                (crate::config::StorageBackend::R2, "Cloudflare R2"),
+                (
+                    crate::config::StorageBackend::Rclone,
+                    "Rclone（serve s3 アダプタ）",
+                ),
+            ],
+        );
+        s.backend_rclone = backend == crate::config::StorageBackend::Rclone;
+        ui.add_space(12.0);
+        if s.backend_rclone {
+            self.rclone_adapter_fields(ui);
+            return;
+        }
         field_label(ui, &t, "アカウント ID");
         ui.add(
             input(
@@ -261,6 +285,81 @@ impl ResticTrayApp {
 
         ui.add_space(14.0);
         self.r2_danger_zone(ui);
+    }
+
+    /// Rclone `serve s3` adapter fields: any rclone remote (incl. `crypt:` for Rclone Crypto) is
+    /// served on a loopback-only local S3 endpoint so Restic keeps using its standard S3 backend.
+    fn rclone_adapter_fields(&mut self, ui: &mut Ui) {
+        let t = self.tokens;
+        let s = &mut self.settings;
+        field_label(ui, &t, "リモート（rclone 名）");
+        ui.add(
+            input(
+                &t,
+                &mut s.rclone_remote,
+                "例: mycrypt: や gdrive:backups（crypt: リモートなら Rclone Crypto で暗号化）",
+            )
+            .font(mono(13.0))
+            .desired_width(f32::INFINITY),
+        );
+        help_text(
+            ui,
+            &t,
+            "認証情報は rclone.conf に格納されます。アプリはrclone serve s3 を 127.0.0.1 だけで起動します。",
+        );
+        ui.add_space(12.0);
+        let half = (ui.available_width() - 16.0) / 2.0;
+        ui.horizontal_top(|ui| {
+            ui.vertical(|ui| {
+                ui.set_width(half);
+                field_label(ui, &t, "バケット（リモート内のフォルダ）");
+                ui.add(
+                    input(&t, &mut s.rclone_bucket, "restic")
+                        .font(mono(13.0))
+                        .desired_width(half),
+                );
+            });
+            ui.add_space(8.0);
+            ui.vertical(|ui| {
+                ui.set_width(half);
+                field_label(ui, &t, "ポート（空欄なら自動割り当て）");
+                ui.add(
+                    input(&t, &mut s.rclone_port, "例: 0 または空欄")
+                        .font(mono(13.0))
+                        .desired_width(half),
+                );
+            });
+        });
+        ui.add_space(12.0);
+        disclosure(ui, &t, "詳細設定", &mut self.show_advanced_rclone);
+        if self.show_advanced_rclone {
+            let s = &mut self.settings;
+            ui.add_space(8.0);
+            binary_path_picker(
+                ui,
+                &t,
+                "rclone.exe の場所",
+                &mut s.rclone_path,
+                "空欄なら同梱、exe と同じフォルダ、PATH の順に探します",
+                "rclone",
+            );
+            ui.add_space(8.0);
+            binary_path_picker(
+                ui,
+                &t,
+                "rclone.conf の場所（任意）",
+                &mut s.rclone_config,
+                "空欄なら rclone の既定位置（%APPDATA%\\rclone\\rclone.conf）",
+                "conf",
+            );
+        }
+        let mut preview = self.controller.get_config();
+        let s = &mut self.settings;
+        s.apply(&mut preview);
+        if let Ok(desc) = preview.rclone.repository_display() {
+            ui.add_space(8.0);
+            ui.label(RichText::new(desc).font(mono(12.0)).color(t.text_3));
+        }
     }
 
     fn r2_danger_zone(&mut self, ui: &mut Ui) {

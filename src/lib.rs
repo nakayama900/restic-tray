@@ -8,6 +8,7 @@ pub mod fs_safety;
 pub mod instance;
 pub mod notify;
 pub mod r2_s3;
+pub mod rclone;
 pub mod restic;
 pub mod scheduler;
 pub mod secrets;

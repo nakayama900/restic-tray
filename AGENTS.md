@@ -21,7 +21,7 @@
 - **公開リポジトリ**: `nayuengin/restic-tray`（MIT ライセンス）
 - **運用体制**: オーナー（`@nayuengin`）単独アカウント＋AI メンテナ体制で運用管理を行う（Issue トリアージ、ラベル整理、PR の確認・レビュー、定型保守）。オーナー単独＋AI 運用のため、公開リポジトリの `main` Ruleset は **PR 経由＋必須ステータスチェック全通過** のみを強制し、GitHub のレビュー承認必須および Code Owner レビュー必須は設定しない。重要パス（[`.github/CODEOWNERS`](.github/CODEOWNERS)）の変更、セキュリティ対応、スコープ拡大、リリース確定の最終判断・実行はオーナー（`@nayuengin`）が担う
 - **アプリ ID**: `io.github.nayuengin.restic-tray`（データ保存先 `%LOCALAPPDATA%\io.github.nayuengin.restic-tray\` および通知 `AppUserModelID`）
-- **対象スコープ**: Windows x64・Cloudflare R2（`s3:` バックエンド）・日本語 UI
+- **対象スコープ**: Windows x64（一次プラットフォーム）・Cloudflare R2（`s3:` バックエンド）/ Rclone アダプタ・macOS / Linux（実験的・CI の品質ゲートのみ）・日本語 UI
 - **サポート方針**: 最新リリースのみ対応・ベストエフォート（SLA なし）。セマンティックバージョニングに従い、破壊的変更はメジャーバージョンでのみ行う
 
 ---

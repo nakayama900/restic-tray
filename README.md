@@ -32,7 +32,7 @@ Restic Tray periodically backs up your working folders — including uncommitted
 > [!NOTE]
 > - **Unofficial software**: Restic Tray is an independent open-source project and is not affiliated with, endorsed by, or sponsored by [restic](https://restic.net/) or [Cloudflare](https://www.cloudflare.com/).
 > - **UI language**: The desktop GUI and built-in MCP tool descriptions are currently **Japanese only**. Localization is not yet implemented.
-> - **Platform**: Windows 10 / Windows Server 2016 or later (x64) only, with TLS 1.2 or later required (required by bundled `restic.exe` v0.18.0+).
+> - **Platform**: Windows 10 / Windows Server 2016 or later (x64), with TLS 1.2 or later required (required by bundled `restic.exe` v0.18.0+). **Experimental**: the core app also builds and runs on macOS and Linux (Keychain / Secret Service credentials, Unix-socket MCP bridge); packaging still ships Windows bundles only.
 > - **AI-operated maintenance**: This repository is managed by AI maintainers under the owner's (`@nayuengin`) direction (see [`AGENTS.md`](AGENTS.md)). AI-assisted contributions are welcome with PR disclosure (see [`CONTRIBUTING.md`](CONTRIBUTING.md)).
 
 ## Screenshots

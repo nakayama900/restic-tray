@@ -19,6 +19,7 @@ use crate::fs_safety::{canonicalize_existing_dir, is_git_repository};
 /// Managed as the single source of truth for runtime data storage and Windows toast notifications.
 pub const APP_IDENTIFIER: &str = "io.github.nayuengin.restic-tray";
 pub const CONFIG_FILENAME: &str = "config.json";
+pub const CONFIG_PKL_FILENAME: &str = "config.pkl";
 pub const MIN_INTERVAL_MINUTES: u64 = 1;
 pub const MAX_INTERVAL_MINUTES: u64 = 10_080;
 pub const MAX_KEEP_LAST: u32 = 1_000;
@@ -99,13 +100,143 @@ impl WriterState {
     }
 }
 
-/// Deserializes an explicitly present `storageBackend` key as a non-null string so
-/// `"storageBackend": null` is rejected instead of silently defaulting to R2.
-fn deserialize_non_null_string<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    String::deserialize(deserializer).map(Some)
+/// Storage backend that owns the Restic repository. `GoogleDrive` is the removed v0.4–v0.7
+/// backend selector kept only to produce the dedicated config error on load.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StorageBackend {
+    #[default]
+    R2,
+    Rclone,
+    #[serde(rename = "googleDrive")]
+    GoogleDrive,
+}
+
+impl StorageBackend {
+    pub fn is_default(&self) -> bool {
+        *self == Self::R2
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::R2 => "r2",
+            Self::Rclone => "rclone",
+            Self::GoogleDrive => "googleDrive",
+        }
+    }
+}
+
+/// Rclone adapter settings (non-secret). Restic Tray runs `rclone serve s3` as a loopback-only
+/// local S3 adapter (`--addr 127.0.0.1:<port>`, anonymous access) in front of any rclone remote,
+/// so Restic keeps using its standard S3 backend. Pointing `remote` at a `crypt:` remote gives
+/// client-side encryption via Rclone Crypto on top of Restic's own encryption. Rclone keeps its
+/// own credentials in `rclone.conf`.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct RcloneConfig {
+    /// Served rclone remote, e.g. `mycrypt:` or `gdrive:backups`.
+    #[serde(default)]
+    pub remote: String,
+    /// S3 bucket name Restic uses; `serve s3` maps buckets to directories under the remote root.
+    #[serde(default = "default_rclone_bucket")]
+    pub bucket: String,
+    /// Fixed loopback port for the adapter; picked at runtime when unset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub port: Option<u16>,
+    /// Optional `rclone.exe` override; its folder is prepended to `PATH` for the adapter.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub binary_path: Option<String>,
+    /// Optional `rclone.conf` override passed via the `RCLONE_CONFIG` environment variable.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_path: Option<String>,
+}
+
+fn default_rclone_bucket() -> String {
+    "restic".to_owned()
+}
+
+impl RcloneConfig {
+    /// Normalizes the served remote: trimmed, forward slashes, no trailing slash on the path part.
+    /// The path may be empty (`mycrypt:` serves the remote root).
+    pub fn normalized_remote(&self) -> String {
+        let trimmed = self.remote.trim().replace('\\', "/");
+        match trimmed.split_once(':') {
+            Some((name, path)) => {
+                let path = path.trim_end_matches('/');
+                if path.is_empty() {
+                    format!("{name}:")
+                } else {
+                    format!("{name}:{path}")
+                }
+            }
+            None => trimmed,
+        }
+    }
+
+    /// Validates the `<remote>[:<path>]` form: an rclone remote name before the first colon and a
+    /// path without whitespace, control characters, or `..` segments after it.
+    pub fn validate_remote(&self) -> AppResult<String> {
+        let normalized = self.normalized_remote();
+        let Some((name, path)) = normalized.split_once(':') else {
+            return Err(AppError::Config(
+                "rclone.remote must be an rclone remote such as \"mycrypt:\" or \"gdrive:backups\""
+                    .to_owned(),
+            ));
+        };
+        let name_chars_ok = !name.is_empty()
+            && name.chars().enumerate().all(|(i, c)| {
+                c.is_ascii_alphanumeric() || c == '_' || c == '-' || (i > 0 && c == '.')
+            });
+        if !name_chars_ok {
+            return Err(AppError::Config(format!(
+                "rclone.remote \"{normalized}\": the remote name before \":\" must be alphanumeric characters, \"_\", \"-\", or \".\""
+            )));
+        }
+        let segments: Vec<&str> = path.split('/').collect();
+        let path_segments = path
+            .strip_prefix('/')
+            .map(|_| &segments[1..])
+            .unwrap_or(&segments);
+        if path.chars().any(|c| c.is_whitespace() || c.is_control())
+            || path_segments
+                .iter()
+                .any(|seg| seg.is_empty() || *seg == "..")
+        {
+            return Err(AppError::Config(format!(
+                "rclone.remote \"{normalized}\": the path must not contain whitespace or \"..\" segments"
+            )));
+        }
+        Ok(normalized)
+    }
+
+    /// The S3 bucket name Restic uses. `serve s3` maps buckets to directories under the remote
+    /// root, so this becomes a folder in the served remote.
+    pub fn normalized_bucket(&self) -> String {
+        self.bucket.trim().trim_matches('/').to_owned()
+    }
+
+    pub fn is_configured(&self) -> bool {
+        !self.remote.trim().is_empty() && !self.normalized_bucket().is_empty()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.remote.trim().is_empty()
+            && self.bucket == default_rclone_bucket()
+            && self.port.is_none()
+            && self.binary_path.is_none()
+            && self.config_path.is_none()
+    }
+
+    /// Human-readable storage description for status display. The actual endpoint is decided at
+    /// runtime by the `rclone serve s3` adapter (see [`crate::rclone`]).
+    pub fn repository_display(&self) -> AppResult<String> {
+        let normalized = self.validate_remote()?;
+        Ok(format!(
+            "rclone serve s3 -> {} (bucket: {})",
+            normalized,
+            self.normalized_bucket()
+        ))
+    }
 }
 
 /// Root configuration structure persisted in `config.json`.
@@ -114,14 +245,14 @@ where
 pub struct AppConfig {
     #[serde(default = "default_schema_version")]
     pub schema_version: u32,
-    /// Deprecated v0.4–v0.7 backend selector accepted on load (`"r2"` or unset only;
-    /// `"googleDrive"` triggers a dedicated config error) and never written back.
+    /// Storage backend selector (`"r2"` default, `"rclone"` for the restic rclone backend
+    /// incl. `crypt:` remotes via Rclone Crypto). Omitted when `r2`.
     #[serde(
         default,
-        deserialize_with = "deserialize_non_null_string",
-        skip_serializing
+        rename = "storageBackend",
+        skip_serializing_if = "StorageBackend::is_default"
     )]
-    pub storage_backend: Option<String>,
+    pub storage_backend: StorageBackend,
     /// Stable lowercase PC name passed to `restic backup --host`. Defaults to lowercase OS hostname.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub machine_name: Option<String>,
@@ -133,6 +264,9 @@ pub struct AppConfig {
     pub maintenance_role: MaintenanceRole,
     #[serde(default)]
     pub r2: R2Config,
+    /// Rclone backend settings used when `storageBackend` is `"rclone"`.
+    #[serde(default, skip_serializing_if = "RcloneConfig::is_empty")]
+    pub rclone: RcloneConfig,
     /// Deprecated v0.4–v0.7 Google Drive section accepted on load and dropped; never written back.
     #[serde(default, skip_serializing)]
     pub google_drive: DeprecatedConfigField,
@@ -147,6 +281,14 @@ pub struct AppConfig {
     /// folder holding that file, e.g. `SourceAssetDB` for Unity's `Library`.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub exclude_if_present: Vec<String>,
+    /// Honors each backup target's root `.gitignore` (gitignore syntax) during backup and
+    /// restore. Nested `.gitignore` files are not read.
+    #[serde(default)]
+    pub use_gitignore: bool,
+    /// Additional ignore files in gitignore syntax, resolved relative to each backup target
+    /// (or absolute), e.g. `.gitignore`-style `.resticignore`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub ignore_files: Vec<String>,
     #[serde(default)]
     pub schedule: ScheduleConfig,
     #[serde(default)]
@@ -226,16 +368,19 @@ impl Default for AppConfig {
     fn default() -> Self {
         Self {
             schema_version: default_schema_version(),
-            storage_backend: None,
+            storage_backend: StorageBackend::default(),
             machine_name: None,
             default_project_root: None,
             maintenance_role: MaintenanceRole::default(),
             r2: R2Config::default(),
+            rclone: RcloneConfig::default(),
             google_drive: DeprecatedConfigField,
             targets: Vec::new(),
             use_basic_excludes: true,
             global_excludes: Vec::new(),
             exclude_if_present: Vec::new(),
+            use_gitignore: false,
+            ignore_files: Vec::new(),
             schedule: ScheduleConfig::default(),
             retention: RetentionPolicy::default(),
             agent: AgentPolicy::default(),
@@ -475,6 +620,13 @@ pub fn default_os_machine_name() -> String {
         .ok()
         .map(|s| s.trim().to_ascii_lowercase())
         .filter(|s| !s.is_empty())
+        .or_else(|| {
+            gethostname::gethostname()
+                .into_string()
+                .ok()
+                .map(|s| s.trim().to_ascii_lowercase())
+                .filter(|s| !s.is_empty())
+        })
         .unwrap_or_else(|| "local-pc".to_owned())
 }
 
@@ -784,7 +936,11 @@ impl Default for AgentPolicy {
 /// Resolves the default application data directory under `%LOCALAPPDATA%\<APP_IDENTIFIER>`
 /// (`%LOCALAPPDATA%\io.github.nayuengin.restic-tray`).
 pub fn default_app_data_dir() -> PathBuf {
-    app_data_dir_from_local_app_data(std::env::var_os("LOCALAPPDATA").as_deref())
+    if cfg!(windows) {
+        app_data_dir_from_local_app_data(std::env::var_os("LOCALAPPDATA").as_deref())
+    } else {
+        app_data_dir_posix()
+    }
 }
 
 fn app_data_dir_from_local_app_data(local_app_data: Option<&std::ffi::OsStr>) -> PathBuf {
@@ -794,8 +950,39 @@ fn app_data_dir_from_local_app_data(local_app_data: Option<&std::ffi::OsStr>) ->
         .join(APP_IDENTIFIER)
 }
 
+/// Per-OS application data directory on macOS / Linux:
+/// - macOS: `$HOME/Library/Application Support`
+/// - Linux: `$XDG_DATA_HOME` or `$HOME/.local/share`
+///
+/// Falls back to the current directory like the Windows path does without `LOCALAPPDATA`.
+fn app_data_dir_posix() -> PathBuf {
+    app_data_dir_posix_from(std::env::var_os("HOME"), std::env::var_os("XDG_DATA_HOME"))
+}
+
+fn app_data_dir_posix_from(
+    home: Option<std::ffi::OsString>,
+    xdg: Option<std::ffi::OsString>,
+) -> PathBuf {
+    let home = home.map(PathBuf::from);
+    let base = if cfg!(target_os = "macos") {
+        home.map(|h| h.join("Library").join("Application Support"))
+    } else if let Some(xdg) = xdg.filter(|v| !v.is_empty()) {
+        Some(PathBuf::from(xdg))
+    } else {
+        home.map(|h| h.join(".local").join("share"))
+    };
+    base.unwrap_or_else(|| PathBuf::from("."))
+        .join(APP_IDENTIFIER)
+}
+
 pub fn default_config_path() -> PathBuf {
     default_app_data_dir().join(CONFIG_FILENAME)
+}
+
+/// The `config.pkl` evaluated (with pure-Rust `pklr`) instead of `config.json` when the latter
+/// does not exist.
+pub fn pkl_config_sibling(config_path: &Path) -> PathBuf {
+    config_path.with_file_name(CONFIG_PKL_FILENAME)
 }
 
 impl AppConfig {
@@ -832,11 +1019,21 @@ impl AppConfig {
     }
 
     pub fn is_storage_configured(&self) -> bool {
-        self.r2.is_configured()
+        match self.storage_backend {
+            StorageBackend::R2 => self.r2.is_configured(),
+            StorageBackend::Rclone => self.rclone.is_configured(),
+            StorageBackend::GoogleDrive => false,
+        }
     }
 
     pub fn repository_url(&self) -> AppResult<String> {
-        self.r2.repository_url()
+        match self.storage_backend {
+            StorageBackend::R2 => self.r2.repository_url(),
+            StorageBackend::Rclone => self.rclone.repository_display(),
+            StorageBackend::GoogleDrive => Err(AppError::Config(
+                google_drive_removed_config_error(Path::new("config.json")),
+            )),
+        }
     }
 
     /// `--exclude` patterns for every target: the built-in set when enabled, then `globalExcludes`.
@@ -905,18 +1102,39 @@ pub(crate) fn lock_config_shared(path: &Path) -> AppResult<File> {
 impl AppConfig {
     /// Validates and normalizes all mutable configuration fields.
     pub(crate) fn validate_and_normalize(&mut self, path: &Path) -> AppResult<()> {
-        match self.storage_backend.take().as_deref() {
-            None | Some("r2") => {}
-            Some("googleDrive") => {
+        match self.storage_backend {
+            StorageBackend::R2 => {}
+            StorageBackend::Rclone => {
+                self.rclone
+                    .validate_remote()
+                    .map_err(|e| AppError::Config(format!("rclone in {}: {e}", path.display())))?;
+                if self.rclone.normalized_bucket().is_empty() {
+                    return Err(AppError::Config(format!(
+                        "rclone.bucket in {} must not be empty",
+                        path.display()
+                    )));
+                }
+            }
+            StorageBackend::GoogleDrive => {
                 return Err(AppError::Config(google_drive_removed_config_error(path)));
             }
-            Some(other) => {
-                return Err(AppError::Config(format!(
-                    "storageBackend \"{other}\" in {} is not supported (only \"r2\" is supported)",
-                    path.display()
-                )));
-            }
         }
+        self.ignore_files = self
+            .ignore_files
+            .iter()
+            .map(|s| s.trim().replace('\\', "/"))
+            .filter(|s| {
+                if s.chars().any(|c| c.is_control()) || s.split('/').any(|seg| seg == "..") {
+                    return false;
+                }
+                !s.is_empty()
+            })
+            .fold(Vec::new(), |mut acc: Vec<String>, s| {
+                if !acc.contains(&s) {
+                    acc.push(s);
+                }
+                acc
+            });
         if !(MIN_INTERVAL_MINUTES..=MAX_INTERVAL_MINUTES).contains(&self.schedule.interval_minutes)
         {
             return Err(AppError::Config(format!(
@@ -979,8 +1197,17 @@ impl AppConfig {
     }
 
     /// Loads `path` assuming the caller already holds the adjacent config lock file.
+    /// When `config.json` is absent, a sibling `config.pkl` (Apple Pkl, evaluated with the pure-Rust
+    /// `pklr` evaluator without network access) is read instead. Saving always writes `config.json`,
+    /// which then takes precedence on the next load.
     pub(crate) fn load_or_default_unlocked(path: &Path) -> AppResult<Self> {
         if !path.exists() {
+            let pkl_path = pkl_config_sibling(path);
+            if pkl_path.exists() {
+                let mut cfg = Self::load_pkl(&pkl_path)?;
+                cfg.validate_and_normalize(path)?;
+                return Ok(cfg);
+            }
             let cfg = Self::default();
             cfg.save_atomic(path)?;
             return Ok(cfg);
@@ -991,6 +1218,16 @@ impl AppConfig {
         })?;
         cfg.validate_and_normalize(path)?;
         Ok(cfg)
+    }
+
+    /// Evaluates a Pkl configuration file to JSON with `pklr` (local files only; `http(s)` and
+    /// `package://` imports are unavailable because network features are disabled).
+    fn load_pkl(path: &Path) -> AppResult<Self> {
+        let json = pklr::eval_to_json(path).map_err(|err| {
+            AppError::Config(format!("failed to evaluate {}: {err}", path.display()))
+        })?;
+        serde_json::from_value(json)
+            .map_err(|err| AppError::Config(format!("failed to parse {}: {err}", path.display())))
     }
 
     pub fn load_or_default(path: &Path) -> AppResult<Self> {
@@ -1644,5 +1881,137 @@ mod tests {
         let explicit = AppConfig::load_or_default(&cfg_path).unwrap();
         assert!(explicit.agent.allow_prune);
         assert!(explicit.agent.allow_restore);
+    }
+    #[test]
+    fn app_data_dir_posix_uses_xdg_and_home() {
+        let home = Some(std::ffi::OsString::from("/home/tester"));
+        let xdg = Some(std::ffi::OsString::from("/custom/data"));
+        let with_xdg = app_data_dir_posix_from(home.clone(), xdg);
+        assert!(with_xdg.ends_with(Path::new(APP_IDENTIFIER)));
+        if cfg!(target_os = "macos") {
+            assert!(with_xdg.starts_with(Path::new("/home/tester/Library/Application Support")));
+        } else {
+            assert_eq!(with_xdg, PathBuf::from("/custom/data").join(APP_IDENTIFIER));
+            let home_only = app_data_dir_posix_from(home, None);
+            assert_eq!(
+                home_only,
+                PathBuf::from("/home/tester/.local/share").join(APP_IDENTIFIER)
+            );
+        }
+        assert_eq!(
+            app_data_dir_posix_from(None, None),
+            PathBuf::from(".").join(APP_IDENTIFIER)
+        );
+    }
+
+    #[test]
+    fn rclone_backend_loads_validates_and_round_trips() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        fs::write(
+            &cfg_path,
+            r#"{"storageBackend":"rclone","rclone":{"remote":"mycrypt:","bucket":"restic"}}"#,
+        )
+        .unwrap();
+        let cfg = AppConfig::load_or_default(&cfg_path).unwrap();
+        assert_eq!(cfg.storage_backend, StorageBackend::Rclone);
+        assert!(cfg.is_storage_configured());
+        assert!(
+            cfg.repository_url()
+                .unwrap()
+                .contains("rclone serve s3 -> mycrypt: (bucket: restic)")
+        );
+        cfg.save_atomic(&cfg_path).unwrap();
+        let resaved = fs::read_to_string(&cfg_path).unwrap();
+        assert!(resaved.contains("\"storageBackend\": \"rclone\""));
+        assert!(resaved.contains("\"remote\": \"mycrypt:\""));
+        // Default bucket name round-trips without an explicit value.
+        assert!(resaved.contains("\"bucket\": \"restic\""));
+    }
+
+    #[test]
+    fn rclone_backend_rejects_invalid_remotes() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        for bad in ["", "nosemicolon", ":path", "my crypt:x", "crypt:a/../b"] {
+            fs::write(
+                &cfg_path,
+                format!(r#"{{"storageBackend":"rclone","rclone":{{"remote":"{bad}"}}}}"#),
+            )
+            .unwrap();
+            let err = AppConfig::load_or_default(&cfg_path).unwrap_err();
+            assert!(err.to_string().contains("rclone"), "remote {bad:?}: {err}");
+        }
+    }
+
+    #[test]
+    fn rclone_backend_requires_bucket() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        fs::write(
+            &cfg_path,
+            r#"{"storageBackend":"rclone","rclone":{"remote":"mycrypt:","bucket":"  "}}"#,
+        )
+        .unwrap();
+        assert!(AppConfig::load_or_default(&cfg_path).is_err());
+    }
+
+    #[test]
+    fn rclone_normalized_remote_accepts_root_and_subpaths() {
+        let mut rclone = RcloneConfig {
+            remote: "MyCrypt:Sub/dir/".to_owned(),
+            ..Default::default()
+        };
+        assert_eq!(rclone.normalized_remote(), "MyCrypt:Sub/dir");
+        assert!(rclone.validate_remote().is_ok());
+        rclone.remote = "crypt:".to_owned();
+        assert_eq!(rclone.normalized_remote(), "crypt:");
+        assert!(rclone.validate_remote().is_ok());
+        rclone.remote = r"local:D:\backups".to_owned();
+        assert_eq!(rclone.normalized_remote(), "local:D:/backups");
+        assert!(rclone.validate_remote().is_ok());
+    }
+
+    #[test]
+    fn ignore_settings_normalize_on_load() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        fs::write(
+            &cfg_path,
+            r#"{"useGitignore":true,"ignoreFiles":[" a/.resticignore ","", "b/../c", "dup", "dup"]}"#,
+        )
+        .unwrap();
+        let cfg = AppConfig::load_or_default(&cfg_path).unwrap();
+        assert!(cfg.use_gitignore);
+        assert_eq!(cfg.ignore_files, vec!["a/.resticignore", "dup"]);
+    }
+
+    #[test]
+    fn config_pkl_is_evaluated_when_json_is_absent() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        let pkl_path = pkl_config_sibling(&cfg_path);
+        fs::write(
+            &pkl_path,
+            "schedule {\n  enabled = true\n  intervalMinutes = 90\n}\nr2 {\n  accountId = \"acc123\"\n  bucket = \"bkt\"\n}",
+        )
+        .unwrap();
+        let cfg = AppConfig::load_or_default(&cfg_path).unwrap();
+        assert!(cfg.schedule.enabled);
+        assert_eq!(cfg.schedule.interval_minutes, 90);
+        assert_eq!(cfg.r2.account_id, "acc123");
+        // Saving writes config.json, which then takes precedence.
+        cfg.save_atomic(&cfg_path).unwrap();
+        assert!(cfg_path.exists());
+    }
+
+    #[test]
+    fn config_pkl_invalid_file_fails_cleanly() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let cfg_path = dir.path().join("config.json");
+        let pkl_path = pkl_config_sibling(&cfg_path);
+        fs::write(&pkl_path, "r2 { accountId = ").unwrap();
+        assert!(AppConfig::load_or_default(&cfg_path).is_err());
+        assert!(!cfg_path.exists());
     }
 }

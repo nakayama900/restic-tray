@@ -33,12 +33,22 @@ pub(super) fn backup_filter_args(
     } else {
         Vec::new()
     };
+    // Gitignore-style ignore sources (root `.gitignore` when `useGitignore` is on, plus custom
+    // `ignoreFiles`), collected per target so anchored patterns point at that target's path.
+    let ignore_patterns: Vec<String> = targets
+        .iter()
+        .map(|t| super::ignore::target_ignore_patterns(config, t))
+        .collect::<AppResult<Vec<Vec<String>>>>()?
+        .into_iter()
+        .flatten()
+        .collect();
     let excludes: Vec<&str> = config
         .shared_excludes()
         .into_iter()
         .chain(unity_excludes.iter().map(String::as_str))
         .chain(marker_files)
         .chain(target_patterns)
+        .chain(ignore_patterns.iter().map(String::as_str))
         .collect();
 
     for target in targets {
@@ -85,6 +95,19 @@ pub(crate) fn exclude_fingerprint(config: &AppConfig, targets: &[BackupTarget]) 
         )
         .flat_map(|setting| setting.bytes().chain([0]))
         .fold(0xcbf2_9ce4_8422_2325_u64, |h, b| {
+            (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
+        });
+    // Hash the ignore *settings* (not the on-disk file contents, consistent with the Unity
+    // folders above) so snapshots made with different ignore behavior never look interchangeable.
+    let ignore_settings = std::iter::once(if config.use_gitignore {
+        "gitignore:on"
+    } else {
+        "gitignore:off"
+    })
+    .chain(config.ignore_files.iter().map(String::as_str));
+    let hash = ignore_settings
+        .flat_map(|setting| setting.bytes().chain([0]))
+        .fold(hash, |h, b| {
             (h ^ u64::from(b)).wrapping_mul(0x0100_0000_01b3)
         });
     format!("{hash:016x}")
@@ -195,16 +218,27 @@ fn normalize_exclude_for_restore_root(pat: &str, local_norm: &str) -> Vec<String
     if norm.is_empty() {
         return Vec::new();
     }
+    // Negations (gitignore `!` re-include patterns from ignore files) normalize like their body.
+    let (negated, norm) = match norm.strip_prefix('!') {
+        Some(body) => (true, body.to_owned()),
+        None => (false, norm),
+    };
+    let reattach = |mut p: String| {
+        if negated {
+            p.insert(0, '!');
+        }
+        p
+    };
     if norm.len() > local_norm.len()
         && norm
             .get(..local_norm.len())
             .is_some_and(|prefix| prefix == local_norm)
         && norm.as_bytes().get(local_norm.len()) == Some(&b'/')
     {
-        return vec![norm[local_norm.len()..].to_owned()];
+        return vec![reattach(norm[local_norm.len()..].to_owned())];
     }
 
-    let mut out = vec![norm.clone()];
+    let mut out = vec![reattach(norm.clone())];
     if !norm.starts_with('/') && norm.contains('/') {
         let local_parts: Vec<&str> = local_norm.split('/').filter(|s| !s.is_empty()).collect();
         let pat_parts: Vec<&str> = norm.split('/').filter(|s| !s.is_empty()).collect();
@@ -217,7 +251,7 @@ fn normalize_exclude_for_restore_root(pat: &str, local_norm: &str) -> Vec<String
                     .zip(suffix.iter())
                     .all(|(p_seg, l_seg)| restic_segment_matches(p_seg, l_seg))
             {
-                let anchored = format!("/{}", pat_parts[k..].join("/"));
+                let anchored = reattach(format!("/{}", pat_parts[k..].join("/")));
                 if !out.iter().any(|existing| existing == &anchored) {
                     out.push(anchored);
                 }
@@ -338,6 +372,14 @@ pub(crate) fn restore_delete_exclude_patterns(
 
     for pat in target_excludes {
         for converted in normalize_exclude_for_restore_root(pat, &local_norm) {
+            push_unique(converted);
+        }
+    }
+
+    // Gitignore-style ignore sources read from the restore destination itself, so a receiver's
+    // restore neither deletes nor overwrites files the sender's backup excluded.
+    for pat in super::ignore::restore_ignore_patterns(config, local_dir)? {
+        for converted in normalize_exclude_for_restore_root(&pat, &local_norm) {
             push_unique(converted);
         }
     }
